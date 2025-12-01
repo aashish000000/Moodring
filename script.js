@@ -995,20 +995,20 @@ if (loginBtn) {
             window.location.reload();
         } else {
             // Show login modal
-            if (loginModal) loginModal.classList.add('active');
+            if (loginModal) loginModal.classList.add('visible');
         }
     });
 }
 
 if (loginModalClose) {
     loginModalClose.addEventListener('click', () => {
-        if (loginModal) loginModal.classList.remove('active');
+        if (loginModal) loginModal.classList.remove('visible');
     });
 }
 
 if (loginModal) {
     loginModal.addEventListener('click', (e) => {
-        if (e.target === loginModal) loginModal.classList.remove('active');
+        if (e.target === loginModal) loginModal.classList.remove('visible');
     });
 }
 
@@ -1024,7 +1024,7 @@ if (loginForm) {
         
         try {
             await login(email, password);
-            if (loginModal) loginModal.classList.remove('active');
+            if (loginModal) loginModal.classList.remove('visible');
             showToast('Logged in successfully!');
             // Reload to show admin features
             window.location.reload();
