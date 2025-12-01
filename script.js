@@ -232,6 +232,148 @@ async function fetchPublicPosts() {
     return publicPosts;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// VISITOR COUNTER
+// ═══════════════════════════════════════════════════════════════
+async function incrementVisitorCount() {
+    if (!supabase) return;
+    try {
+        // Increment the counter
+        await supabase.rpc('increment_visitor_count').catch(() => {
+            // If RPC doesn't exist, do manual increment
+            return supabase
+                .from('visitors')
+                .update({ count: supabase.sql`count + 1` })
+                .eq('id', 1);
+        });
+    } catch (e) {
+        console.log('Visitor count increment failed:', e);
+    }
+}
+
+async function fetchVisitorCount() {
+    if (!supabase) return;
+    try {
+        const { data, error } = await supabase
+            .from('visitors')
+            .select('count')
+            .eq('id', 1)
+            .single();
+        
+        if (data) {
+            const countEl = document.getElementById('visitorCount');
+            if (countEl) countEl.textContent = data.count.toLocaleString();
+        }
+    } catch (e) {
+        console.log('Visitor count fetch failed:', e);
+    }
+}
+
+async function trackVisitor() {
+    // Only count unique visits (once per session)
+    if (sessionStorage.getItem('visited')) return;
+    sessionStorage.setItem('visited', 'true');
+    
+    if (!supabase) return;
+    try {
+        // Simple increment
+        const { data } = await supabase
+            .from('visitors')
+            .select('count')
+            .eq('id', 1)
+            .single();
+        
+        if (data) {
+            await supabase
+                .from('visitors')
+                .update({ count: data.count + 1 })
+                .eq('id', 1);
+        }
+    } catch (e) {
+        console.log('Track visitor failed:', e);
+    }
+    fetchVisitorCount();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// COMMENTS
+// ═══════════════════════════════════════════════════════════════
+async function fetchComments(postId) {
+    if (!supabase) return [];
+    try {
+        const { data, error } = await supabase
+            .from('comments')
+            .select('*')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: false });
+        
+        return data || [];
+    } catch (e) {
+        console.log('Fetch comments failed:', e);
+        return [];
+    }
+}
+
+async function submitComment(postId, name, comment) {
+    if (!supabase) return null;
+    try {
+        const { data, error } = await supabase
+            .from('comments')
+            .insert({
+                post_id: postId,
+                name: name.trim() || 'Anonymous',
+                comment: comment.trim()
+            })
+            .select()
+            .single();
+        
+        if (error) throw error;
+        return data;
+    } catch (e) {
+        console.log('Submit comment failed:', e);
+        return null;
+    }
+}
+
+function renderCommentsSection(postId, comments) {
+    const commentsHtml = comments.length > 0
+        ? comments.map(c => `
+            <div class="comment-item">
+                <div class="comment-meta">
+                    <span class="comment-author">${escapeHtml(c.name)}</span>
+                    <span class="comment-date">${new Date(c.created_at).toLocaleDateString()}</span>
+                </div>
+                <p class="comment-content">${escapeHtml(c.comment)}</p>
+            </div>
+        `).join('')
+        : '<p class="no-comments">No comments yet. Be the first!</p>';
+    
+    return `
+        <div class="comments-section">
+            <div class="comments-header">
+                <span class="comments-title">Comments</span>
+                <span class="comments-count">${comments.length}</span>
+            </div>
+            <form class="comment-form" data-post-id="${postId}">
+                <div class="comment-input-row">
+                    <input type="text" class="comment-name" placeholder="Your name" maxlength="50">
+                    <textarea class="comment-text" placeholder="Write a comment..." maxlength="500" required></textarea>
+                </div>
+                <button type="submit" class="comment-submit">Post Comment</button>
+            </form>
+            <div class="comments-list" id="comments-${postId}">
+                ${commentsHtml}
+            </div>
+        </div>
+    `;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 function hideAdminElements() {
     // Hide write/edit elements for non-admins
     const adminElements = [
@@ -1057,6 +1199,60 @@ if (loginForm) {
     });
 }
 
+// Comment form submission (event delegation)
+document.addEventListener('submit', async (e) => {
+    if (e.target.classList.contains('comment-form')) {
+        e.preventDefault();
+        const form = e.target;
+        const postId = form.dataset.postId;
+        const nameInput = form.querySelector('.comment-name');
+        const textInput = form.querySelector('.comment-text');
+        const submitBtn = form.querySelector('.comment-submit');
+        
+        const name = nameInput.value.trim();
+        const comment = textInput.value.trim();
+        
+        if (!comment) return;
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Posting...';
+        
+        const result = await submitComment(postId, name, comment);
+        
+        if (result) {
+            // Clear form
+            nameInput.value = '';
+            textInput.value = '';
+            
+            // Reload comments for this post
+            const comments = await fetchComments(postId);
+            const listEl = document.getElementById(`comments-list-${postId}`);
+            const countEl = document.getElementById(`comments-count-${postId}`);
+            
+            if (countEl) countEl.textContent = comments.length;
+            
+            if (listEl) {
+                listEl.innerHTML = comments.map(c => `
+                    <div class="comment-item">
+                        <div class="comment-meta">
+                            <span class="comment-author">${escapeHtml(c.name)}</span>
+                            <span class="comment-date">${new Date(c.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p class="comment-content">${escapeHtml(c.comment)}</p>
+                    </div>
+                `).join('');
+            }
+            
+            showToast('Comment posted!');
+        } else {
+            showToast('Failed to post comment');
+        }
+        
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Post Comment';
+    }
+});
+
 // Mood selection in form
 moodOptions.forEach(opt => {
     opt.addEventListener('click', () => {
@@ -1270,8 +1466,53 @@ async function renderPosts() {
             <div class="post-content">${parseMarkdown(post.text)}</div>
             ${post.image ? `<div class="post-image"><img src="${post.image}" alt="Post image"></div>` : ''}
             ${post.audio ? `<div class="post-audio"><audio controls src="${post.audio}"></audio></div>` : ''}
+            <div class="comments-section" id="comments-section-${post.id}">
+                <div class="comments-header">
+                    <span class="comments-title">Comments</span>
+                    <span class="comments-count" id="comments-count-${post.id}">...</span>
+                </div>
+                <form class="comment-form" data-post-id="${post.id}">
+                    <div class="comment-input-row">
+                        <input type="text" class="comment-name" placeholder="Your name" maxlength="50">
+                        <textarea class="comment-text" placeholder="Write a comment..." maxlength="500" required></textarea>
+                    </div>
+                    <button type="submit" class="comment-submit">Post Comment</button>
+                </form>
+                <div class="comments-list" id="comments-list-${post.id}">
+                    <p class="no-comments">Loading comments...</p>
+                </div>
+            </div>
         </article>
     `).join('');
+    
+    // Load comments for each post
+    loadAllComments(filtered);
+}
+
+async function loadAllComments(posts) {
+    for (const post of posts) {
+        const comments = await fetchComments(post.id);
+        const listEl = document.getElementById(`comments-list-${post.id}`);
+        const countEl = document.getElementById(`comments-count-${post.id}`);
+        
+        if (countEl) countEl.textContent = comments.length;
+        
+        if (listEl) {
+            if (comments.length === 0) {
+                listEl.innerHTML = '<p class="no-comments">No comments yet. Be the first!</p>';
+            } else {
+                listEl.innerHTML = comments.map(c => `
+                    <div class="comment-item">
+                        <div class="comment-meta">
+                            <span class="comment-author">${escapeHtml(c.name)}</span>
+                            <span class="comment-date">${new Date(c.created_at).toLocaleDateString()}</span>
+                        </div>
+                        <p class="comment-content">${escapeHtml(c.comment)}</p>
+                    </div>
+                `).join('');
+            }
+        }
+    }
 }
 
 function escapeForAttr(text) {
@@ -2040,6 +2281,10 @@ async function init() {
     if (IS_ADMIN) {
         checkScheduledPosts();
     }
+    
+    // Track visitor and show count
+    trackVisitor();
+    fetchVisitorCount();
     
     // Render posts
     await renderPosts();
