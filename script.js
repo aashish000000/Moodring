@@ -403,6 +403,7 @@ function hideAdminElements() {
         '.compose-bar',
         '.write-btn',
         '.delete-btn',
+        '.weather-suggestion',
         '#randomBtn',
         '#statsBtn',
         '#exportBtn',
@@ -1517,6 +1518,11 @@ async function updateCounts() {
 }
 
 function openModal(preselectedMood = null) {
+    // Only allow admin (you) to write posts
+    if (!IS_ADMIN) {
+        showToast('Only Aashish can write posts here');
+        return;
+    }
     if (thoughtInput) thoughtInput.value = '';
     if (charCount) charCount.textContent = '0';
     if (readingTimePreview) readingTimePreview.textContent = '< 1 min read';
