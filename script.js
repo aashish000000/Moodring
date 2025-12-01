@@ -18,8 +18,8 @@ const API_CONFIG = {
     OPENAI_KEY: '', // Add your key here
     
     // Supabase - Get credentials at: https://supabase.com
-    SUPABASE_URL: '', // Your Supabase project URL
-    SUPABASE_KEY: '', // Your Supabase anon key
+    SUPABASE_URL: 'https://yexoyqwswfamxtxqzoac.supabase.co',
+    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleG95cXdzd2ZhbXh0eHF6b2FjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NDQ4NTksImV4cCI6MjA4MDEyMDg1OX0.rx1E9v7vsjs45vs3pgXvY8bgLNeJHLCagL3yye0Bjag'
     
     // Spotify - Requires OAuth setup at: https://developer.spotify.com
     SPOTIFY_CLIENT_ID: '',
@@ -236,8 +236,32 @@ function saveUserPosts(posts) {
     localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(posts));
 }
 
+// Fetch posts from Supabase
+async function fetchSupabasePosts() {
+    if (!supabase) return [];
+    try {
+        const { data, error } = await supabase
+            .from('posts')
+            .select('*')
+            .order('timestamp', { ascending: false });
+        if (error) throw error;
+        return data || [];
+    } catch (e) {
+        console.log('Supabase fetch failed:', e);
+        return [];
+    }
+}
+
 async function getAllPosts() {
-    // PUBLIC MODE: Show only published posts from posts.json
+    // If Supabase is configured, use it for everyone (admin & visitors)
+    if (supabase) {
+        const posts = await fetchSupabasePosts();
+        if (posts.length > 0) {
+            return posts;
+        }
+    }
+    
+    // Fallback: PUBLIC MODE - Show posts from posts.json
     if (!IS_ADMIN) {
         if (publicPosts.length === 0) {
             await fetchPublicPosts();
@@ -245,7 +269,7 @@ async function getAllPosts() {
         return publicPosts.sort((a, b) => b.timestamp - a.timestamp);
     }
     
-    // ADMIN MODE: Show user's local posts + sample posts
+    // Fallback: ADMIN MODE - Show user's local posts
     let userPosts = getUserPosts();
     
     // If Supabase is configured, try to fetch from cloud
@@ -1821,12 +1845,17 @@ document.addEventListener('keydown', (e) => {
 async function init() {
     initTheme();
     
-    // Fetch public posts first if not admin
+    // Initialize Supabase FIRST (for both admin and visitors)
+    initSupabase();
+    
+    // Small delay to ensure Supabase is ready
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Fetch public posts as fallback if Supabase fails
     if (!IS_ADMIN) {
         await fetchPublicPosts();
     }
     
-    initSupabase();
     initSpotify();
     
     // Only show admin features for admin
