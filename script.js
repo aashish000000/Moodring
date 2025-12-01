@@ -127,8 +127,60 @@ const CONFIG = {
     STORAGE_KEY: 'aashish_blog_posts',
     THEME_KEY: 'aashish_blog_theme',
     STREAK_KEY: 'aashish_blog_streak',
-    WORDS_PER_MINUTE: 200
+    WORDS_PER_MINUTE: 200,
+    ADMIN_KEY: 'aashish2024' // Change this to your secret password
 };
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN MODE - Check if user is admin
+// ═══════════════════════════════════════════════════════════════
+const urlParams = new URLSearchParams(window.location.search);
+const IS_ADMIN = urlParams.get('admin') === CONFIG.ADMIN_KEY;
+let publicPosts = []; // Cached public posts from posts.json
+
+async function fetchPublicPosts() {
+    try {
+        const response = await fetch('posts.json');
+        if (response.ok) {
+            publicPosts = await response.json();
+        }
+    } catch (e) {
+        console.log('Could not load posts.json:', e);
+        publicPosts = [];
+    }
+    return publicPosts;
+}
+
+function hideAdminElements() {
+    // Hide write/edit elements for non-admins
+    const adminElements = [
+        '.compose-bar',
+        '.write-btn',
+        '.delete-btn',
+        '#randomBtn',
+        '#statsBtn',
+        '#exportBtn',
+        '#publishBtn',
+        '.streak-indicator',
+        '#syncStatus'
+    ];
+    
+    adminElements.forEach(selector => {
+        document.querySelectorAll(selector).forEach(el => {
+            el.style.display = 'none';
+        });
+    });
+    
+    // Add "Read Only" indicator for visitors
+    const header = document.querySelector('.profile-header');
+    if (header && !document.querySelector('.visitor-badge')) {
+        const badge = document.createElement('div');
+        badge.className = 'visitor-badge';
+        badge.innerHTML = 'Reading Mode';
+        badge.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-top: 8px; padding: 4px 12px; background: var(--border-color); border-radius: 12px; display: inline-block;';
+        header.appendChild(badge);
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE INITIALIZATION
@@ -185,6 +237,15 @@ function saveUserPosts(posts) {
 }
 
 async function getAllPosts() {
+    // PUBLIC MODE: Show only published posts from posts.json
+    if (!IS_ADMIN) {
+        if (publicPosts.length === 0) {
+            await fetchPublicPosts();
+        }
+        return publicPosts.sort((a, b) => b.timestamp - a.timestamp);
+    }
+    
+    // ADMIN MODE: Show user's local posts + sample posts
     let userPosts = getUserPosts();
     
     // If Supabase is configured, try to fetch from cloud
@@ -616,6 +677,39 @@ function exportPosts() {
     showToast(`Exported ${userPosts.length} posts`);
 }
 
+// Publish posts - creates the posts.json file format
+function publishPosts() {
+    const userPosts = getUserPosts();
+    
+    if (userPosts.length === 0) {
+        showToast('No posts to publish');
+        return;
+    }
+    
+    // Clean posts for publishing (remove sample posts, keep only essential fields)
+    const publishData = userPosts.map(post => ({
+        id: post.id,
+        text: post.text,
+        mood: post.mood,
+        date: post.date,
+        timestamp: post.timestamp,
+        image: post.image || null,
+        audio: post.audio || null
+    }));
+    
+    const blob = new Blob([JSON.stringify(publishData, null, 4)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'posts.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showToast(`Published ${userPosts.length} posts! Replace your posts.json file with this.`);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SHARE FUNCTIONALITY
 // ═══════════════════════════════════════════════════════════════
@@ -734,6 +828,9 @@ const sectionTitles = {
 // ═══════════════════════════════════════════════════════════════
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 if (exportBtn) exportBtn.addEventListener('click', exportPosts);
+
+const publishBtn = document.getElementById('publishBtn');
+if (publishBtn) publishBtn.addEventListener('click', publishPosts);
 if (searchInput) searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
 if (searchClear) searchClear.addEventListener('click', clearSearch);
 if (quoteRefresh) quoteRefresh.addEventListener('click', fetchQuote);
@@ -1723,9 +1820,24 @@ document.addEventListener('keydown', (e) => {
 // ═══════════════════════════════════════════════════════════════
 async function init() {
     initTheme();
+    
+    // Fetch public posts first if not admin
+    if (!IS_ADMIN) {
+        await fetchPublicPosts();
+    }
+    
     initSupabase();
     initSpotify();
-    displayStreak();
+    
+    // Only show admin features for admin
+    if (IS_ADMIN) {
+        displayStreak();
+        console.log('🔓 Admin mode active');
+    } else {
+        // Hide admin-only elements after DOM is ready
+        setTimeout(hideAdminElements, 100);
+        console.log('👁️ Visitor mode - read only');
+    }
     
     // Fetch APIs
     fetchWeather();
@@ -1736,8 +1848,10 @@ async function init() {
         fetchBackground('all');
     }
     
-    // Check scheduled posts on load
-    checkScheduledPosts();
+    // Check scheduled posts on load (admin only)
+    if (IS_ADMIN) {
+        checkScheduledPosts();
+    }
     
     // Render posts
     await renderPosts();
