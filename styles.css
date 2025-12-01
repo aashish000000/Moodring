@@ -2359,162 +2359,70 @@ button {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   COMMENTS
+   REACTIONS
    ═══════════════════════════════════════════════════════════════ */
-.comments-section {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
+.reactions-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
     border-top: 1px solid var(--border-light);
 }
 
-.comments-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-}
-
-.comments-title {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-}
-
-.comments-count {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-}
-
-.comment-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.comment-input-row {
+.reactions-buttons {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
-.comment-name {
-    flex: 0 0 120px;
-    padding: 0.6rem 0.8rem;
+.reaction-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.7rem;
+    background: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 0.85rem;
-}
-
-.comment-text {
-    flex: 1;
-    padding: 0.6rem 0.8rem;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-size: 0.85rem;
-    resize: none;
-    min-height: 60px;
-}
-
-.comment-name:focus,
-.comment-text:focus {
-    outline: none;
-    border-color: var(--text-muted);
-}
-
-.comment-submit {
-    align-self: flex-end;
-    padding: 0.5rem 1rem;
-    background: var(--text-primary);
-    color: var(--bg-primary);
-    border: none;
-    border-radius: var(--radius-md);
-    font-size: 0.8rem;
-    font-weight: 500;
+    border-radius: 9999px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
     cursor: pointer;
-    transition: opacity 0.2s ease;
+    transition: all 0.2s ease;
 }
 
-.comment-submit:hover {
-    opacity: 0.9;
+.reaction-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--text-muted);
+    transform: translateY(-1px);
 }
 
-.comment-submit:disabled {
-    opacity: 0.5;
+.reaction-btn.active {
+    background: var(--accent-green-bg);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.reaction-btn:disabled {
+    opacity: 0.6;
     cursor: not-allowed;
 }
 
-.comments-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+.reaction-btn span:first-child {
+    font-size: 1.1rem;
 }
 
-.comment-item {
-    padding: 0.75rem;
-    background: var(--bg-secondary);
-    border-radius: var(--radius-md);
-}
-
-.comment-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.4rem;
-}
-
-.comment-author {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-}
-
-.comment-date {
+.reaction-count {
     font-size: 0.75rem;
-    color: var(--text-muted);
-}
-
-.comment-delete-btn {
-    background: none;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 0.2rem;
-    border-radius: 4px;
-    opacity: 0.6;
-    transition: all 0.2s ease;
-    margin-left: auto;
-}
-
-.comment-delete-btn:hover {
-    opacity: 1;
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.comment-content {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    line-height: 1.5;
-}
-
-.no-comments {
+    font-weight: 600;
+    min-width: 1.2rem;
     text-align: center;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    padding: 1rem;
 }
 
 @media (max-width: 600px) {
-    .comment-input-row {
-        flex-direction: column;
+    .reactions-buttons {
+        gap: 0.4rem;
     }
     
-    .comment-name {
-        flex: 1;
+    .reaction-btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.85rem;
     }
 }
 
