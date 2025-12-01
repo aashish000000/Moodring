@@ -2467,6 +2467,24 @@ button {
     color: var(--text-muted);
 }
 
+.comment-delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.2rem;
+    border-radius: 4px;
+    opacity: 0.6;
+    transition: all 0.2s ease;
+    margin-left: auto;
+}
+
+.comment-delete-btn:hover {
+    opacity: 1;
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
 .comment-content {
     font-size: 0.9rem;
     color: var(--text-secondary);

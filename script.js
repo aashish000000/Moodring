@@ -1233,10 +1233,17 @@ document.addEventListener('submit', async (e) => {
             
             if (listEl) {
                 listEl.innerHTML = comments.map(c => `
-                    <div class="comment-item">
+                    <div class="comment-item" data-comment-id="${c.id}" data-post-id="${postId}">
                         <div class="comment-meta">
                             <span class="comment-author">${escapeHtml(c.name)}</span>
                             <span class="comment-date">${new Date(c.created_at).toLocaleDateString()}</span>
+                            ${IS_ADMIN ? `
+                                <button class="comment-delete-btn" onclick="deleteComment(${c.id}, '${postId}')" title="Delete comment">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            ` : ''}
                         </div>
                         <p class="comment-content">${escapeHtml(c.comment)}</p>
                     </div>
@@ -1502,16 +1509,73 @@ async function loadAllComments(posts) {
                 listEl.innerHTML = '<p class="no-comments">No comments yet. Be the first!</p>';
             } else {
                 listEl.innerHTML = comments.map(c => `
-                    <div class="comment-item">
+                    <div class="comment-item" data-comment-id="${c.id}" data-post-id="${post.id}">
                         <div class="comment-meta">
                             <span class="comment-author">${escapeHtml(c.name)}</span>
                             <span class="comment-date">${new Date(c.created_at).toLocaleDateString()}</span>
+                            ${IS_ADMIN ? `
+                                <button class="comment-delete-btn" onclick="deleteComment(${c.id}, '${post.id}')" title="Delete comment">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            ` : ''}
                         </div>
                         <p class="comment-content">${escapeHtml(c.comment)}</p>
                     </div>
                 `).join('');
             }
         }
+    }
+}
+
+// Delete comment (admin only)
+async function deleteComment(commentId, postId) {
+    if (!IS_ADMIN) return;
+    if (!confirm('Delete this comment?')) return;
+    
+    if (!supabase) return;
+    
+    try {
+        const { error } = await supabase
+            .from('comments')
+            .delete()
+            .eq('id', commentId);
+        
+        if (error) throw error;
+        
+        // Reload comments for this post
+        const comments = await fetchComments(postId);
+        const listEl = document.getElementById(`comments-list-${postId}`);
+        const countEl = document.getElementById(`comments-count-${postId}`);
+        
+        if (countEl) countEl.textContent = comments.length;
+        
+        if (listEl) {
+            if (comments.length === 0) {
+                listEl.innerHTML = '<p class="no-comments">No comments yet. Be the first!</p>';
+            } else {
+                listEl.innerHTML = comments.map(c => `
+                    <div class="comment-item" data-comment-id="${c.id}" data-post-id="${postId}">
+                        <div class="comment-meta">
+                            <span class="comment-author">${escapeHtml(c.name)}</span>
+                            <span class="comment-date">${new Date(c.created_at).toLocaleDateString()}</span>
+                            <button class="comment-delete-btn" onclick="deleteComment(${c.id}, '${postId}')" title="Delete comment">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="comment-content">${escapeHtml(c.comment)}</p>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        showToast('Comment deleted');
+    } catch (e) {
+        console.log('Delete comment failed:', e);
+        showToast('Failed to delete comment');
     }
 }
 
