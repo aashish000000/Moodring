@@ -1832,6 +1832,9 @@ async function init() {
     // Only show admin features for admin
     if (IS_ADMIN) {
         displayStreak();
+        // Show admin badge
+        const adminBadge = document.getElementById('adminBadge');
+        if (adminBadge) adminBadge.style.display = 'inline-block';
         console.log('🔓 Admin mode active');
     } else {
         // Hide admin-only elements after DOM is ready
