@@ -306,21 +306,35 @@ async function addPost(text, mood, image = null, audio = null) {
         }),
         timestamp: now.getTime(),
         image: image,
-        audio: audio,
-        isSample: false
+        audio: audio
     };
     
-    // Save locally first
+    // Save locally first (with isSample for local filtering)
+    const localPost = { ...newPost, isSample: false };
     const userPosts = getUserPosts();
-    userPosts.unshift(newPost);
+    userPosts.unshift(localPost);
     saveUserPosts(userPosts);
     
-    // Sync to Supabase if configured
+    // Sync to Supabase if configured (only send fields that exist in table)
     if (supabase) {
         updateSyncStatus('syncing');
         try {
-            await supabase.from('posts').insert(newPost);
-            updateSyncStatus('synced');
+            const supabasePost = {
+                id: newPost.id,
+                text: newPost.text,
+                mood: newPost.mood,
+                date: newPost.date,
+                timestamp: newPost.timestamp,
+                image: newPost.image,
+                audio: newPost.audio
+            };
+            const { error } = await supabase.from('posts').insert(supabasePost);
+            if (error) {
+                console.error('Supabase insert error:', error);
+                updateSyncStatus('local');
+            } else {
+                updateSyncStatus('synced');
+            }
         } catch (e) {
             console.log('Supabase sync failed:', e);
             updateSyncStatus('local');
