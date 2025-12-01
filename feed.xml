@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Aashish Joshi - Personal Blog</title>
+        <link>https://aashishthegreatblog.netlify.app</link>
+        <description>Thoughts, ideas &amp; creative musings by Aashish Joshi. A personal space for melancholic musings, vibrant celebrations, and fiery rants.</description>
+        <language>en-us</language>
+        <lastBuildDate>Sun, 01 Dec 2024 00:00:00 GMT</lastBuildDate>
+        <atom:link href="https://aashishthegreatblog.netlify.app/feed.xml" rel="self" type="application/rss+xml"/>
+        <image>
+            <url>https://aashishthegreatblog.netlify.app/icon-512.png</url>
+            <title>Aashish Joshi</title>
+            <link>https://aashishthegreatblog.netlify.app</link>
+        </image>
+        <!-- Posts will be dynamically added here or you can manually update -->
+        <item>
+            <title>Welcome to my blog</title>
+            <link>https://aashishthegreatblog.netlify.app</link>
+            <description>Welcome to my corner of the internet. This is where I share my unfiltered thoughts.</description>
+            <pubDate>Sun, 01 Dec 2024 00:00:00 GMT</pubDate>
+            <guid>https://aashishthegreatblog.netlify.app#welcome</guid>
+        </item>
+    </channel>
+</rss>
+
