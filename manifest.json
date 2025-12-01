@@ -1,0 +1,27 @@
+{
+    "name": "Aashish Joshi - Personal Blog",
+    "short_name": "Aashish's Blog",
+    "description": "Thoughts, ideas & creative musings by Aashish Joshi",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#fafafa",
+    "theme_color": "#1a1a1a",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "avatar.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "avatar.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": ["blog", "personal", "lifestyle"],
+    "lang": "en-US"
+}
+

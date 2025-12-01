@@ -3,14 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Aashish Joshi — Thoughts & Musings</title>
-    <meta name="description" content="A personal space for thoughts, ideas, and creative musings by Aashish Joshi.">
+    
+    <!-- Primary Meta Tags -->
+    <title>Aashish Joshi — Thoughts & Musings | Personal Blog</title>
+    <meta name="title" content="Aashish Joshi — Thoughts & Musings | Personal Blog">
+    <meta name="description" content="A personal space for thoughts, ideas, and creative musings by Aashish Joshi. From Doti, Nepal to New Jersey, USA — sharing melancholic musings, vibrant celebrations, and fiery rants.">
+    <meta name="keywords" content="Aashish Joshi, personal blog, thoughts, musings, Nepal, New Jersey, creative writing, mood blog">
+    <meta name="author" content="Aashish Joshi">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://aashishthegreatblog.netlify.app/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://aashishthegreatblog.netlify.app/">
+    <meta property="og:title" content="Aashish Joshi — Thoughts & Musings">
+    <meta property="og:description" content="A personal space for thoughts, ideas, and creative musings by Aashish Joshi.">
+    <meta property="og:image" content="https://aashishthegreatblog.netlify.app/avatar.png">
+    <meta property="og:site_name" content="Aashish Joshi Blog">
+    <meta property="og:locale" content="en_US">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://aashishthegreatblog.netlify.app/">
+    <meta property="twitter:title" content="Aashish Joshi — Thoughts & Musings">
+    <meta property="twitter:description" content="A personal space for thoughts, ideas, and creative musings by Aashish Joshi.">
+    <meta property="twitter:image" content="https://aashishthegreatblog.netlify.app/avatar.png">
+    <meta property="twitter:creator" content="@_ashishthegreat">
     
     <!-- Mobile browser theme colors -->
-    <meta name="theme-color" content="#faf9f7" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0f0f10" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Aashish's Blog">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Favicon & Icons -->
+    <link rel="icon" type="image/png" href="avatar.png">
+    <link rel="apple-touch-icon" href="avatar.png">
+    
+    <!-- RSS Feed -->
+    <link rel="alternate" type="application/rss+xml" title="Aashish Joshi Blog RSS Feed" href="feed.xml">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,6 +58,31 @@
     
     <!-- Supabase JS (for cloud sync) -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        "name": "Aashish Joshi - Personal Blog",
+        "description": "A personal space for thoughts, ideas, and creative musings",
+        "url": "https://aashishthegreatblog.netlify.app",
+        "author": {
+            "@type": "Person",
+            "name": "Aashish Joshi",
+            "url": "https://aashishthegreatblog.netlify.app",
+            "sameAs": [
+                "https://x.com/_ashishthegreat",
+                "https://www.linkedin.com/in/aa-joshi/",
+                "https://www.instagram.com/__aashishthegreat/"
+            ]
+        },
+        "publisher": {
+            "@type": "Person",
+            "name": "Aashish Joshi"
+        }
+    }
+    </script>
     
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
