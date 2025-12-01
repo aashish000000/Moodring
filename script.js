@@ -132,11 +132,74 @@ const CONFIG = {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// ADMIN MODE - Check if user is admin
+// ADMIN MODE - Check if user is logged in
 // ═══════════════════════════════════════════════════════════════
 const urlParams = new URLSearchParams(window.location.search);
-const IS_ADMIN = urlParams.get('admin') === CONFIG.ADMIN_KEY;
+let IS_ADMIN = urlParams.get('admin') === CONFIG.ADMIN_KEY; // Fallback to URL param
+let currentUser = null;
 let publicPosts = []; // Cached public posts from posts.json
+
+// Check if user is authenticated with Supabase
+async function checkAuth() {
+    if (!supabase) return false;
+    try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            currentUser = user;
+            IS_ADMIN = true;
+            updateLoginUI(true);
+            return true;
+        }
+    } catch (e) {
+        console.log('Auth check failed:', e);
+    }
+    return false;
+}
+
+// Login function
+async function login(email, password) {
+    if (!supabase) {
+        throw new Error('Supabase not initialized');
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+    if (error) throw error;
+    currentUser = data.user;
+    IS_ADMIN = true;
+    updateLoginUI(true);
+    return data;
+}
+
+// Logout function
+async function logout() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    currentUser = null;
+    IS_ADMIN = false;
+    updateLoginUI(false);
+    hideAdminElements();
+    await renderPosts();
+    await updateCounts();
+}
+
+// Update login button UI
+function updateLoginUI(loggedIn) {
+    const loginBtn = document.getElementById('loginBtn');
+    const loginBtnText = document.getElementById('loginBtnText');
+    const adminBadge = document.getElementById('adminBadge');
+    
+    if (loggedIn) {
+        if (loginBtn) loginBtn.classList.add('logged-in');
+        if (loginBtnText) loginBtnText.textContent = 'Logout';
+        if (adminBadge) adminBadge.style.display = 'inline-block';
+    } else {
+        if (loginBtn) loginBtn.classList.remove('logged-in');
+        if (loginBtnText) loginBtnText.textContent = 'Login';
+        if (adminBadge) adminBadge.style.display = 'none';
+    }
+}
 
 async function fetchPublicPosts() {
     try {
@@ -913,6 +976,66 @@ if (modalClose) modalClose.addEventListener('click', closeModal);
 if (modalOverlay) {
     modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) closeModal();
+    });
+}
+
+// Login Modal
+const loginBtn = document.getElementById('loginBtn');
+const loginModal = document.getElementById('loginModal');
+const loginModalClose = document.getElementById('loginModalClose');
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
+
+if (loginBtn) {
+    loginBtn.addEventListener('click', async () => {
+        if (currentUser || IS_ADMIN) {
+            // User is logged in, so logout
+            await logout();
+            showToast('Logged out');
+            window.location.reload();
+        } else {
+            // Show login modal
+            if (loginModal) loginModal.classList.add('active');
+        }
+    });
+}
+
+if (loginModalClose) {
+    loginModalClose.addEventListener('click', () => {
+        if (loginModal) loginModal.classList.remove('active');
+    });
+}
+
+if (loginModal) {
+    loginModal.addEventListener('click', (e) => {
+        if (e.target === loginModal) loginModal.classList.remove('active');
+    });
+}
+
+if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const submitBtn = document.getElementById('loginSubmit');
+        
+        if (submitBtn) submitBtn.disabled = true;
+        if (loginError) loginError.style.display = 'none';
+        
+        try {
+            await login(email, password);
+            if (loginModal) loginModal.classList.remove('active');
+            showToast('Logged in successfully!');
+            // Reload to show admin features
+            window.location.reload();
+        } catch (error) {
+            if (loginError) {
+                loginError.textContent = error.message || 'Login failed';
+                loginError.style.display = 'block';
+            }
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
+        }
     });
 }
 
@@ -1865,6 +1988,9 @@ async function init() {
     // Small delay to ensure Supabase is ready
     await new Promise(resolve => setTimeout(resolve, 100));
     
+    // Check if user is authenticated
+    await checkAuth();
+    
     // Fetch public posts as fallback if Supabase fails
     if (!IS_ADMIN) {
         await fetchPublicPosts();
@@ -1872,12 +1998,10 @@ async function init() {
     
     initSpotify();
     
-    // Only show admin features for admin
+    // Only show admin features for admin (logged in or URL param)
     if (IS_ADMIN) {
         displayStreak();
-        // Show admin badge
-        const adminBadge = document.getElementById('adminBadge');
-        if (adminBadge) adminBadge.style.display = 'inline-block';
+        updateLoginUI(true);
         console.log('🔓 Admin mode active');
     } else {
         // Hide admin-only elements after DOM is ready

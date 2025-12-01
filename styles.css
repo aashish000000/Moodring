@@ -2221,3 +2221,113 @@ button {
     }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   LOGIN BUTTON & MODAL
+   ═══════════════════════════════════════════════════════════════ */
+.login-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.login-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.login-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.login-btn.logged-in {
+    background: var(--accent-green-bg);
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+}
+
+.login-modal {
+    max-width: 360px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.login-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.login-subtitle {
+    color: var(--text-muted);
+    margin-bottom: 1.5rem;
+}
+
+.login-field {
+    text-align: left;
+    margin-bottom: 1rem;
+}
+
+.login-field label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+}
+
+.login-field input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.2s ease;
+}
+
+.login-field input:focus {
+    outline: none;
+    border-color: var(--text-primary);
+}
+
+.login-submit {
+    width: 100%;
+    padding: 0.85rem;
+    margin-top: 0.5rem;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.login-submit:hover {
+    opacity: 0.9;
+}
+
+.login-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.login-error {
+    color: #ef4444;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+}
+

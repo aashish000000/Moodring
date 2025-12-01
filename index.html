@@ -88,6 +88,13 @@
                         </svg>
                         New Post
                     </button>
+                    <!-- Login/Logout Button -->
+                    <button class="login-btn" id="loginBtn" title="Login">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        <span id="loginBtnText">Login</span>
+                    </button>
                 </div>
             </div>
         </header>
@@ -409,6 +416,27 @@
                 <div class="game-paddle" id="gamePaddle"></div>
             </div>
             <p class="game-hint">Use ← → arrow keys or touch to move</p>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal-overlay" id="loginModal">
+        <div class="modal login-modal">
+            <button class="modal-close" id="loginModalClose">×</button>
+            <h3 class="login-title">Welcome Back</h3>
+            <p class="login-subtitle">Sign in to write posts</p>
+            <form id="loginForm">
+                <div class="login-field">
+                    <label for="loginEmail">Email</label>
+                    <input type="email" id="loginEmail" placeholder="your@email.com" required>
+                </div>
+                <div class="login-field">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="login-submit" id="loginSubmit">Sign In</button>
+            </form>
+            <p class="login-error" id="loginError" style="display: none;"></p>
         </div>
     </div>
 
