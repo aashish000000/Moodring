@@ -189,6 +189,18 @@ body {
     align-items: center;
 }
 
+/* Admin Badge */
+.admin-badge {
+    background: #22c55e;
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 /* Sync Status Pill */
 .sync-status {
     display: flex;
