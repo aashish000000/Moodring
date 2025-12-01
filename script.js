@@ -19,7 +19,7 @@ const API_CONFIG = {
     
     // Supabase - Get credentials at: https://supabase.com
     SUPABASE_URL: 'https://yexoyqwswfamxtxqzoac.supabase.co',
-    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleG95cXdzd2ZhbXh0eHF6b2FjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NDQ4NTksImV4cCI6MjA4MDEyMDg1OX0.rx1E9v7vsjs45vs3pgXvY8bgLNeJHLCagL3yye0Bjag'
+    SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleG95cXdzd2ZhbXh0eHF6b2FjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NDQ4NTksImV4cCI6MjA4MDEyMDg1OX0.rx1E9v7vsjs45vs3pgXvY8bgLNeJHLCagL3yye0Bjag',
     
     // Spotify - Requires OAuth setup at: https://developer.spotify.com
     SPOTIFY_CLIENT_ID: '',
