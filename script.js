@@ -1485,10 +1485,16 @@ function setupEventListeners() {
         clearTimeout(longPressTimer);
     });
     
-    // Close share menus on outside click
+    // Close share menus and reaction popups on outside click
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.share-btn') && !e.target.closest('.share-menu')) {
             document.querySelectorAll('.share-menu').forEach(m => m.classList.remove('visible'));
+            document.body.style.overflow = '';
+        }
+        
+        // Close reaction popup when clicking outside (on mobile backdrop)
+        if (!e.target.closest('.reaction-trigger') && !e.target.closest('.reactions-popup')) {
+            document.querySelectorAll('.reactions-popup').forEach(p => p.classList.remove('visible'));
         }
     });
     

@@ -2764,7 +2764,8 @@ button {
 .reactions-popup {
     position: absolute;
     bottom: 100%;
-    left: 0;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px) scale(0.9);
     margin-bottom: 8px;
     padding: 8px 12px;
     background: var(--bg-elevated);
@@ -2775,7 +2776,6 @@ button {
     gap: 4px;
     opacity: 0;
     visibility: hidden;
-    transform: translateY(10px) scale(0.9);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
 }
@@ -2783,7 +2783,7 @@ button {
 .reactions-popup.visible {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0) scale(1);
+    transform: translateX(-50%) translateY(0) scale(1);
 }
 
 .reaction-emoji {
@@ -2887,21 +2887,52 @@ button {
 
 /* Mobile reactions */
 @media (max-width: 600px) {
+    /* Fixed bottom sheet for reactions on mobile - like Facebook */
     .reactions-popup {
-        left: 50%;
-        transform: translateX(-50%) translateY(10px) scale(0.9);
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        transform: translateY(100%);
+        margin-bottom: 0;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        padding: 1rem;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        justify-content: center;
+        gap: 0.5rem;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+    }
+
+    .reactions-popup.visible {
+        transform: translateY(0);
+        animation: slideUp 0.25s ease;
     }
     
-    .reactions-popup.visible {
-        transform: translateX(-50%) translateY(0) scale(1);
+    .reactions-popup::before {
+        content: '';
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 32px;
+        height: 3px;
+        background: var(--border-color);
+        border-radius: 2px;
+    }
+
+    .reaction-emoji {
+        padding: 0.75rem;
     }
     
     .reaction-emoji .emoji {
         font-size: 2rem;
     }
     
-    .reaction-emoji {
-        padding: 8px;
+    .reaction-emoji .emoji-label {
+        font-size: 0.65rem;
+        margin-top: 6px;
     }
 }
 
@@ -4522,9 +4553,10 @@ body {
     }
 }
 
-/* Backdrop for mobile share menu */
+/* Backdrop for mobile share menu and reactions */
 @media (max-width: 600px) {
-    .share-menu.visible::after {
+    .share-menu.visible::after,
+    .reactions-popup.visible::after {
         content: '';
         position: fixed;
         inset: 0;
