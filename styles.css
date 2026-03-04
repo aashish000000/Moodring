@@ -2575,62 +2575,196 @@ button {
     border-top: 1px solid var(--border-light);
 }
 
-.reactions-buttons {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.reaction-btn {
+/* Facebook-style Reactions */
+.reactions-wrapper {
     display: flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.4rem 0.7rem;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 9999px;
+    gap: 0.75rem;
+}
+
+.reaction-trigger {
+    position: relative;
+}
+
+.like-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 0.9rem;
+    background: none;
+    border: none;
+    border-radius: var(--radius-md);
     color: var(--text-secondary);
     font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.reaction-btn:hover {
+.like-btn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.like-btn.reacted {
+    color: var(--accent-red);
+}
+
+.like-btn.reacted .like-icon {
+    animation: heartBeat 0.4s ease;
+}
+
+.like-icon {
+    font-size: 1.25rem;
+    transition: transform 0.2s ease;
+}
+
+.like-btn:hover .like-icon {
+    transform: scale(1.1);
+}
+
+/* Reactions Popup */
+.reactions-popup {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 8px;
+    padding: 8px 12px;
     background: var(--bg-elevated);
-    border-color: var(--text-muted);
-    transform: translateY(-1px);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0,0,0,0.05);
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px) scale(0.9);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
 }
 
-.reaction-btn.active {
-    background: var(--accent-green-bg);
-    border-color: var(--accent-green);
-    color: var(--accent-green);
+.reactions-popup.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
 }
 
-.reaction-btn:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.reaction-emoji {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px;
+    background: none;
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    animation: popIn 0.3s ease backwards;
+    animation-delay: var(--delay);
 }
 
-.reaction-btn span:first-child {
-    font-size: 1.1rem;
+.reaction-emoji:hover {
+    transform: scale(1.4) translateY(-8px);
+    background: var(--bg-secondary);
 }
 
-.reaction-count {
-    font-size: 0.75rem;
+.reaction-emoji:active,
+.reaction-emoji.selected {
+    transform: scale(1.6) translateY(-12px);
+}
+
+.reaction-emoji .emoji {
+    font-size: 1.75rem;
+    line-height: 1;
+    transition: transform 0.15s ease;
+}
+
+.reaction-emoji:hover .emoji {
+    animation: wiggle 0.4s ease;
+}
+
+.reaction-emoji .emoji-label {
+    font-size: 0.6rem;
     font-weight: 600;
-    min-width: 1.2rem;
-    text-align: center;
+    color: var(--text-muted);
+    margin-top: 4px;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: all 0.2s ease;
+    white-space: nowrap;
 }
 
+.reaction-emoji:hover .emoji-label {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Reactions Summary */
+.reactions-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.reactions-summary:empty {
+    display: none;
+}
+
+.reaction-emojis {
+    font-size: 1rem;
+    letter-spacing: -4px;
+}
+
+.reaction-total {
+    font-weight: 500;
+    margin-left: 4px;
+}
+
+/* Animations */
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+}
+
+@keyframes heartBeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.3); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Mobile reactions */
 @media (max-width: 600px) {
-    .reactions-buttons {
-        gap: 0.4rem;
+    .reactions-popup {
+        left: 50%;
+        transform: translateX(-50%) translateY(10px) scale(0.9);
     }
     
-    .reaction-btn {
-        padding: 0.35rem 0.6rem;
-        font-size: 0.85rem;
+    .reactions-popup.visible {
+        transform: translateX(-50%) translateY(0) scale(1);
+    }
+    
+    .reaction-emoji .emoji {
+        font-size: 2rem;
+    }
+    
+    .reaction-emoji {
+        padding: 8px;
     }
 }
 
@@ -4008,9 +4142,8 @@ button {
         align-items: flex-start;
     }
     
-    .reactions-buttons {
+    .reactions-wrapper {
         width: 100%;
-        justify-content: flex-start;
     }
     
     .post-action-buttons {
@@ -4065,7 +4198,8 @@ body {
     .icon-btn,
     .theme-toggle,
     .filter-btn,
-    .reaction-btn,
+    .like-btn,
+    .reaction-emoji,
     .share-btn,
     .delete-btn,
     .toolbar-btn,
@@ -4074,9 +4208,9 @@ body {
         min-height: 44px;
     }
     
-    .reaction-btn {
-        padding: 0.6rem 0.8rem;
-        font-size: 1.1rem;
+    .like-btn {
+        padding: 0.6rem 0.9rem;
+        font-size: 1rem;
     }
     
     .filter-btn {
@@ -4103,7 +4237,7 @@ body {
     }
     
     /* Active states for touch */
-    .reaction-btn:active,
+    .like-btn:active,
     .share-btn:active,
     .filter-btn:active {
         transform: scale(0.95);
@@ -4217,19 +4351,6 @@ body {
         overscroll-behavior: none;
     }
     
-    /* Reactions scroll horizontally on small screens */
-    .reactions-buttons {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-        padding-bottom: 0.25rem;
-    }
-    
-    .reactions-buttons::-webkit-scrollbar {
-        display: none;
-    }
-    
     /* Login modal mobile improvements */
     .login-modal {
         width: 100%;
@@ -4280,8 +4401,7 @@ body {
     }
     
     /* Smooth momentum scrolling */
-    .nav-filters,
-    .reactions-buttons {
+    .nav-filters {
         -webkit-overflow-scrolling: touch;
     }
     
