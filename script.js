@@ -91,7 +91,7 @@ let currentUser = null;
 let currentFilter = 'all';
 let searchQuery = '';
 let selectedMood = null;
-let currentPostImage = null;
+let currentPostImages = [];
 let currentPostAudio = null;
 
 const moodLabels = { blue: 'Melancholy', yellow: 'Vibrant', red: 'Fiery' };
@@ -228,7 +228,7 @@ async function getAllPosts() {
     return allPosts.sort((a, b) => b.timestamp - a.timestamp);
 }
 
-async function createPost(text, mood, image = null, audio = null) {
+async function createPost(text, mood, images = [], audio = null) {
     const now = new Date();
     const newPost = {
         id: 'post-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
@@ -236,7 +236,8 @@ async function createPost(text, mood, image = null, audio = null) {
         mood,
         date: now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
         timestamp: now.getTime(),
-        image,
+        images: images.length > 0 ? images : null,
+        image: images.length === 1 ? images[0] : null,
         audio,
     };
     
@@ -443,6 +444,38 @@ async function renderPosts() {
     }
 }
 
+function renderPostGallery(post) {
+    const images = post.images || (post.image ? [post.image] : []);
+    if (images.length === 0) return '';
+    
+    const count = images.length;
+    const gridClass = `post-gallery gallery-${Math.min(count, 4)}`;
+    
+    return `
+        <div class="${gridClass}">
+            ${images.slice(0, 4).map((src, i) => `
+                <div class="gallery-item" onclick="openImageViewer('${src}')">
+                    <img src="${src}" alt="Photo ${i + 1}" loading="lazy">
+                    ${count > 4 && i === 3 ? `<div class="gallery-more">+${count - 4}</div>` : ''}
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function openImageViewer(src) {
+    const viewer = document.createElement('div');
+    viewer.className = 'image-viewer';
+    viewer.innerHTML = `
+        <div class="image-viewer-backdrop" onclick="this.parentElement.remove()"></div>
+        <img src="${src}" alt="Full size image">
+        <button class="image-viewer-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    document.body.appendChild(viewer);
+}
+
+window.openImageViewer = openImageViewer;
+
 function renderPostCard(post) {
     const isOwner = IS_ADMIN && !post.isSample;
     
@@ -465,7 +498,7 @@ function renderPostCard(post) {
             
             <div class="post-content">${parseMarkdown(post.text)}</div>
             
-            ${post.image ? `<div class="post-image"><img src="${post.image}" alt="Post image" loading="lazy"></div>` : ''}
+            ${renderPostGallery(post)}
             ${post.audio ? `<div class="post-audio"><audio controls src="${post.audio}"></audio></div>` : ''}
             
             <div class="post-footer">
@@ -604,7 +637,7 @@ function openModal(preselectedMood = null) {
     
     moodOptions.forEach(o => o.classList.remove('selected'));
     selectedMood = null;
-    currentPostImage = null;
+    currentPostImages = [];
     currentPostAudio = null;
     removeImage();
     removeAudio();
@@ -655,41 +688,86 @@ function hideLoginModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// IMAGE UPLOAD
+// IMAGE UPLOAD (Multiple)
 // ═══════════════════════════════════════════════════════════════
-function handleImageUpload(file) {
-    if (!file || !file.type.startsWith('image/')) {
-        showToast('Please select an image');
-        return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-        showToast('Image must be under 5MB');
+function handleImageUpload(files) {
+    if (!files || files.length === 0) {
+        showToast('Please select images');
         return;
     }
     
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        currentPostImage = e.target.result;
-        showImagePreview(currentPostImage);
-        showToast('Image added');
-    };
-    reader.readAsDataURL(file);
-}
-
-function showImagePreview(src) {
-    const preview = document.getElementById('imagePreview');
-    if (preview) {
-        preview.innerHTML = `<img src="${src}" alt="Preview"><button type="button" class="remove-image" onclick="removeImage()">×</button>`;
-        preview.style.display = 'block';
+    const maxImages = 4;
+    const remainingSlots = maxImages - currentPostImages.length;
+    
+    if (remainingSlots <= 0) {
+        showToast('Maximum 4 images allowed');
+        return;
     }
+    
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+    let processed = 0;
+    
+    filesToProcess.forEach(file => {
+        if (!file.type.startsWith('image/')) {
+            showToast('Please select only images');
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Each image must be under 5MB');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            currentPostImages.push(e.target.result);
+            processed++;
+            if (processed === filesToProcess.length) {
+                showImagePreview();
+                showToast(`${processed} image${processed > 1 ? 's' : ''} added`);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
 }
 
-function removeImage() {
-    currentPostImage = null;
+function showImagePreview() {
     const preview = document.getElementById('imagePreview');
-    if (preview) {
+    if (!preview) return;
+    
+    if (currentPostImages.length === 0) {
         preview.innerHTML = '';
         preview.style.display = 'none';
+        return;
+    }
+    
+    const gridClass = `image-grid-${Math.min(currentPostImages.length, 4)}`;
+    
+    preview.innerHTML = `
+        <div class="image-preview-grid ${gridClass}">
+            ${currentPostImages.map((src, index) => `
+                <div class="preview-image-item">
+                    <img src="${src}" alt="Preview ${index + 1}">
+                    <button type="button" class="remove-single-image" onclick="removeImage(${index})">×</button>
+                </div>
+            `).join('')}
+        </div>
+        ${currentPostImages.length < 4 ? `<p class="image-count">${currentPostImages.length}/4 images</p>` : ''}
+    `;
+    preview.style.display = 'block';
+}
+
+function removeImage(index) {
+    if (typeof index === 'number') {
+        currentPostImages.splice(index, 1);
+        showImagePreview();
+        showToast('Image removed');
+    } else {
+        currentPostImages = [];
+        const preview = document.getElementById('imagePreview');
+        if (preview) {
+            preview.innerHTML = '';
+            preview.style.display = 'none';
+        }
     }
     const input = document.getElementById('imageInput');
     if (input) input.value = '';
@@ -860,7 +938,7 @@ function saveDraft() {
     const draft = {
         text: thoughtInput.value,
         mood: selectedMood,
-        image: currentPostImage,
+        images: currentPostImages,
         savedAt: new Date().toISOString()
     };
     localStorage.setItem(CONFIG.DRAFT_KEY, JSON.stringify(draft));
@@ -890,9 +968,12 @@ function restoreDraft() {
             }
         }
         
-        if (draft.image) {
-            currentPostImage = draft.image;
-            showImagePreview(draft.image);
+        if (draft.images && draft.images.length > 0) {
+            currentPostImages = draft.images;
+            showImagePreview();
+        } else if (draft.image) {
+            currentPostImages = [draft.image];
+            showImagePreview();
         }
         
         validateForm();
@@ -1132,7 +1213,7 @@ function setupEventListeners() {
         if (!selectedMood || !thoughtInput?.value.trim()) return;
         
         try {
-            await createPost(thoughtInput.value, selectedMood, currentPostImage, currentPostAudio);
+            await createPost(thoughtInput.value, selectedMood, currentPostImages, currentPostAudio);
             closeModal();
             clearDraft();
             showToast('Post published!');
