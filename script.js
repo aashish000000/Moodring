@@ -1030,11 +1030,29 @@ function fetchAIPrompt(mood) {
 // SHARE FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
 function toggleShareMenu(postId) {
-    document.querySelectorAll('.share-menu').forEach(menu => {
-        if (menu.id !== `share-menu-${postId}`) menu.classList.remove('visible');
-    });
     const menu = document.getElementById(`share-menu-${postId}`);
-    if (menu) menu.classList.toggle('visible');
+    const isOpening = menu && !menu.classList.contains('visible');
+    
+    // Close all other menus
+    document.querySelectorAll('.share-menu').forEach(m => {
+        if (m.id !== `share-menu-${postId}`) m.classList.remove('visible');
+    });
+    
+    if (menu) {
+        menu.classList.toggle('visible');
+        
+        // On mobile, prevent body scroll when menu is open
+        if (window.innerWidth <= 600 && isOpening) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+function closeAllShareMenus() {
+    document.querySelectorAll('.share-menu').forEach(m => m.classList.remove('visible'));
+    document.body.style.overflow = '';
 }
 
 function shareToTwitter(text) {
@@ -1095,10 +1113,6 @@ function copyToClipboard(text) {
     const fullText = `${text}\n\n— Aashish Joshi\n${window.location.href}`;
     navigator.clipboard.writeText(fullText).then(() => showToast('Copied to clipboard'));
     closeAllShareMenus();
-}
-
-function closeAllShareMenus() {
-    document.querySelectorAll('.share-menu').forEach(m => m.classList.remove('visible'));
 }
 
 // ═══════════════════════════════════════════════════════════════

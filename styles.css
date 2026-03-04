@@ -4019,3 +4019,301 @@ button {
     }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE ENHANCEMENTS - iOS & Android
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Safe area support for iPhone notch/Dynamic Island */
+@supports (padding: max(0px)) {
+    .site-container {
+        padding-left: max(1rem, env(safe-area-inset-left));
+        padding-right: max(1rem, env(safe-area-inset-right));
+    }
+    
+    .site-header {
+        padding-top: max(1rem, env(safe-area-inset-top));
+    }
+    
+    .modal {
+        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+    }
+    
+    .toast {
+        bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
+    }
+    
+    .share-menu {
+        margin-bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* Smooth scrolling and native feel */
+html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    scroll-behavior: smooth;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: contain;
+}
+
+/* Touch-friendly tap targets (minimum 44px) */
+@media (hover: none) and (pointer: coarse) {
+    .icon-btn,
+    .theme-toggle,
+    .filter-btn,
+    .reaction-btn,
+    .share-btn,
+    .delete-btn,
+    .toolbar-btn,
+    .social-link {
+        min-width: 44px;
+        min-height: 44px;
+    }
+    
+    .reaction-btn {
+        padding: 0.6rem 0.8rem;
+        font-size: 1.1rem;
+    }
+    
+    .filter-btn {
+        padding: 0.75rem 1rem;
+    }
+    
+    .toolbar-btn {
+        padding: 0.6rem;
+    }
+    
+    /* Better touch feedback */
+    button, 
+    a, 
+    .post-card,
+    .gallery-item {
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    [data-theme="dark"] button,
+    [data-theme="dark"] a,
+    [data-theme="dark"] .post-card,
+    [data-theme="dark"] .gallery-item {
+        -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Active states for touch */
+    .reaction-btn:active,
+    .share-btn:active,
+    .filter-btn:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    
+    /* Show share/delete buttons always on touch devices */
+    .delete-btn,
+    .share-btn {
+        opacity: 0.7 !important;
+    }
+}
+
+/* Mobile-specific layout improvements */
+@media (max-width: 600px) {
+    /* Full-width share menu on mobile */
+    .share-actions {
+        position: static;
+    }
+    
+    .share-menu {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: auto;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        padding: 1rem;
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        margin: 0;
+        min-width: unset;
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    }
+    
+    .share-menu.visible {
+        animation: slideUp 0.25s ease;
+    }
+    
+    .share-menu::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: var(--border-color);
+        border-radius: 2px;
+        margin: 0 auto 1rem;
+    }
+    
+    .share-menu button {
+        padding: 1rem;
+        font-size: 1rem;
+        border-radius: var(--radius-md);
+    }
+    
+    .share-menu button svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Image gallery improvements for mobile */
+    .post-gallery {
+        border-radius: var(--radius-md);
+        margin-left: -1rem;
+        margin-right: -1rem;
+        border-radius: 0;
+    }
+    
+    .post-gallery.gallery-1 .gallery-item {
+        aspect-ratio: 4/3;
+        max-height: 300px;
+    }
+    
+    /* Image viewer full screen on mobile */
+    .image-viewer img {
+        max-width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .image-viewer-close {
+        top: max(20px, env(safe-area-inset-top));
+        background: rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Better modal for mobile */
+    .modal-overlay {
+        align-items: flex-end;
+    }
+    
+    .modal {
+        max-height: 92vh;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+    
+    /* Sticky header effect */
+    .site-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--bg-primary);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        margin-bottom: 0;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-light);
+    }
+    
+    /* Pull-down indicator color */
+    body {
+        overscroll-behavior: none;
+    }
+    
+    /* Reactions scroll horizontally on small screens */
+    .reactions-buttons {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+        padding-bottom: 0.25rem;
+    }
+    
+    .reactions-buttons::-webkit-scrollbar {
+        display: none;
+    }
+    
+    /* Login modal mobile improvements */
+    .login-modal {
+        width: 100%;
+        max-width: none;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+    
+    .login-field input {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+        padding: 1rem;
+    }
+    
+    .login-submit {
+        padding: 1rem;
+        font-size: 1rem;
+    }
+}
+
+/* Animations */
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Backdrop for mobile share menu */
+@media (max-width: 600px) {
+    .share-menu.visible::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.4);
+        z-index: -1;
+        animation: fadeIn 0.2s ease;
+    }
+}
+
+/* iOS-specific fixes */
+@supports (-webkit-touch-callout: none) {
+    /* Fix for iOS input zoom */
+    input, textarea, select {
+        font-size: 16px;
+    }
+    
+    /* Smooth momentum scrolling */
+    .nav-filters,
+    .reactions-buttons {
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Fix for iOS rubber-banding */
+    .modal {
+        overscroll-behavior: contain;
+    }
+}
+
+/* High contrast support */
+@media (prefers-contrast: high) {
+    .post-card {
+        border: 2px solid var(--text-primary);
+    }
+    
+    .filter-btn.active {
+        outline: 2px solid var(--text-primary);
+    }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    html {
+        scroll-behavior: auto;
+    }
+}
+
