@@ -1,34 +1,60 @@
 // ═══════════════════════════════════════════════════════════════
-// AASHISH JOSHI - Personal Blog JavaScript
-// Full API Integration: Weather, Quotes, Unsplash, Spotify, AI, Supabase
+// MOODRING - Personal Mood Blog by Aashish Joshi
+// Admin-only posting, visitors can view and react
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════
-// API CONFIGURATION - Add your API keys here
+// API CONFIGURATION
 // ═══════════════════════════════════════════════════════════════
 const API_CONFIG = {
-    // OpenWeatherMap - Get free key at: https://openweathermap.org/api
     OPENWEATHER_KEY: 'a5d032888107167a82e68c30ac1f4ad6',
-    WEATHER_CITY: 'Kearny,NJ,US', // Your city
-    
-    // Unsplash - Get free key at: https://unsplash.com/developers
-    UNSPLASH_KEY: '', // Add your key here
-    
-    // OpenAI - Get key at: https://platform.openai.com/api-keys
-    OPENAI_KEY: '', // Add your key here
-    
-    // Supabase - Get credentials at: https://supabase.com
+    WEATHER_CITY: 'Kearny,NJ,US',
     SUPABASE_URL: 'https://yexoyqwswfamxtxqzoac.supabase.co',
     SUPABASE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlleG95cXdzd2ZhbXh0eHF6b2FjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1NDQ4NTksImV4cCI6MjA4MDEyMDg1OX0.rx1E9v7vsjs45vs3pgXvY8bgLNeJHLCagL3yye0Bjag',
-    
-    // Spotify - Requires OAuth setup at: https://developer.spotify.com
-    SPOTIFY_CLIENT_ID: '',
-    SPOTIFY_REDIRECT_URI: window.location.origin,
 };
 
 // ═══════════════════════════════════════════════════════════════
-// SAMPLE POSTS - Delete these once you have your own content
+// CONFIGURATION
 // ═══════════════════════════════════════════════════════════════
+const CONFIG = {
+    STORAGE_KEY: 'moodring_posts',
+    THEME_KEY: 'moodring_theme',
+    STREAK_KEY: 'moodring_streak',
+    DRAFT_KEY: 'moodring_draft',
+    WORDS_PER_MINUTE: 200,
+};
+
+// ═══════════════════════════════════════════════════════════════
+// FALLBACK DATA
+// ═══════════════════════════════════════════════════════════════
+const FALLBACK_QUOTES = [
+    { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+    { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein" },
+    { text: "What we think, we become.", author: "Buddha" },
+    { text: "Be yourself; everyone else is already taken.", author: "Oscar Wilde" },
+    { text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+    { text: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+    { text: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
+];
+
+const FALLBACK_PROMPTS = {
+    blue: [
+        "Write about a memory that still visits you on quiet nights.",
+        "Describe a goodbye you never got to say.",
+        "What would you tell your younger self about the pain they haven't felt yet?",
+    ],
+    yellow: [
+        "Describe a small moment today that made you smile unexpectedly.",
+        "Write about something you're grateful for that you usually overlook.",
+        "What does your perfect morning look like?",
+    ],
+    red: [
+        "What's something everyone accepts that you think is completely wrong?",
+        "Write about a time you stayed silent when you should have spoken up.",
+        "What would you say to someone if there were no consequences?",
+    ]
+};
+
 const samplePosts = [
     {
         id: 'sample-1',
@@ -53,230 +79,283 @@ const samplePosts = [
         date: "November 26, 2024",
         timestamp: new Date('2024-11-26').getTime(),
         isSample: true
-    },
-    {
-        id: 'sample-4',
-        text: "Some songs are time machines. One melody and suddenly you're nineteen again, feeling everything with that *devastating intensity*.",
-        mood: "blue",
-        date: "November 22, 2024",
-        timestamp: new Date('2024-11-22').getTime(),
-        isSample: true
-    },
-    {
-        id: 'sample-5',
-        text: "There's magic in starting fresh:\n\n- New notebook\n- First page\n- Unlimited possibilities\n\nStretching out like an open road at sunrise.",
-        mood: "yellow",
-        date: "November 20, 2024",
-        timestamp: new Date('2024-11-20').getTime(),
-        isSample: true
-    },
-    {
-        id: 'sample-6',
-        text: "Stop romanticizing burnout. Working yourself into exhaustion isn't dedication—it's a system that profits from your self-destruction.",
-        mood: "red",
-        date: "November 18, 2024",
-        timestamp: new Date('2024-11-18').getTime(),
-        isSample: true
     }
 ];
 
 // ═══════════════════════════════════════════════════════════════
-// FALLBACK DATA (when APIs aren't configured)
+// GLOBAL STATE
 // ═══════════════════════════════════════════════════════════════
-const FALLBACK_QUOTES = [
-    { text: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
-    { text: "In the middle of difficulty lies opportunity.", author: "Albert Einstein" },
-    { text: "What we think, we become.", author: "Buddha" },
-    { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese Proverb" },
-    { text: "Be yourself; everyone else is already taken.", author: "Oscar Wilde" },
-    { text: "The only impossible journey is the one you never begin.", author: "Tony Robbins" },
-    { text: "It is during our darkest moments that we must focus to see the light.", author: "Aristotle" },
-    { text: "Life is what happens when you're busy making other plans.", author: "John Lennon" },
-    { text: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
-    { text: "It always seems impossible until it's done.", author: "Nelson Mandela" }
-];
-
-const FALLBACK_PROMPTS = {
-    blue: [
-        "Write about a memory that still visits you on quiet nights.",
-        "Describe a goodbye you never got to say.",
-        "What would you tell your younger self about the pain they haven't felt yet?",
-        "Write about the space between missing someone and moving on.",
-        "Describe a moment when silence said more than words ever could."
-    ],
-    yellow: [
-        "Describe a small moment today that made you smile unexpectedly.",
-        "Write about something you're grateful for that you usually overlook.",
-        "What does your perfect morning look like? Write it into existence.",
-        "Describe a person who makes your world brighter just by existing.",
-        "Write about a dream you're afraid to admit you have."
-    ],
-    red: [
-        "What's something everyone accepts that you think is completely wrong?",
-        "Write about a time you stayed silent when you should have spoken up.",
-        "What would you say to someone if there were no consequences?",
-        "Describe a system or norm that desperately needs to change.",
-        "Write about the anger you've been told to swallow."
-    ]
-};
-
-// ═══════════════════════════════════════════════════════════════
-// CONFIGURATION
-// ═══════════════════════════════════════════════════════════════
-const CONFIG = {
-    STORAGE_KEY: 'aashish_blog_posts',
-    THEME_KEY: 'aashish_blog_theme',
-    STREAK_KEY: 'aashish_blog_streak',
-    WORDS_PER_MINUTE: 200,
-    ADMIN_KEY: 'aashish2024' // Change this to your secret password
-};
-
-// ═══════════════════════════════════════════════════════════════
-// ADMIN MODE - Check if user is logged in
-// ═══════════════════════════════════════════════════════════════
-const urlParams = new URLSearchParams(window.location.search);
-let IS_ADMIN = urlParams.get('admin') === CONFIG.ADMIN_KEY; // Fallback to URL param
+let supabase = null;
+let IS_ADMIN = false;
 let currentUser = null;
-let publicPosts = []; // Cached public posts from posts.json
+let currentFilter = 'all';
+let searchQuery = '';
+let selectedMood = null;
+let currentPostImage = null;
+let currentPostAudio = null;
 
-// Check if user is authenticated with Supabase
+const moodLabels = { blue: 'Melancholy', yellow: 'Vibrant', red: 'Fiery' };
+const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
+
+// ═══════════════════════════════════════════════════════════════
+// SUPABASE INITIALIZATION
+// ═══════════════════════════════════════════════════════════════
+function initSupabase() {
+    if (API_CONFIG.SUPABASE_URL && API_CONFIG.SUPABASE_KEY && window.supabase) {
+        try {
+            supabase = window.supabase.createClient(API_CONFIG.SUPABASE_URL, API_CONFIG.SUPABASE_KEY);
+            updateSyncStatus('synced');
+            return true;
+        } catch (e) {
+            console.error('Supabase init failed:', e);
+        }
+    }
+    updateSyncStatus('local');
+    return false;
+}
+
+function updateSyncStatus(status) {
+    const syncEl = document.getElementById('syncStatus');
+    if (!syncEl) return;
+    const textEl = syncEl.querySelector('.sync-text');
+    syncEl.classList.remove('synced', 'syncing');
+    if (status === 'synced') {
+        syncEl.classList.add('synced');
+        if (textEl) textEl.textContent = 'Synced';
+    } else if (status === 'syncing') {
+        syncEl.classList.add('syncing');
+        if (textEl) textEl.textContent = 'Syncing...';
+    } else {
+        if (textEl) textEl.textContent = 'Local';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AUTHENTICATION - Admin Only
+// ═══════════════════════════════════════════════════════════════
 async function checkAuth() {
-    if (!supabase) return false;
+    if (!supabase) return null;
     try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             currentUser = user;
             IS_ADMIN = true;
-            updateLoginUI(true);
-            return true;
+            updateAdminUI(true);
+            return user;
         }
     } catch (e) {
         console.log('Auth check failed:', e);
     }
-    return false;
+    updateAdminUI(false);
+    return null;
 }
 
-// Login function
 async function login(email, password) {
-    if (!supabase) {
-        throw new Error('Supabase not initialized');
-    }
-    const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-    });
+    if (!supabase) throw new Error('Database not connected');
+    
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    
     currentUser = data.user;
     IS_ADMIN = true;
-    updateLoginUI(true);
+    updateAdminUI(true);
     return data;
 }
 
-// Logout function
 async function logout() {
     if (!supabase) return;
     await supabase.auth.signOut();
     currentUser = null;
     IS_ADMIN = false;
-    updateLoginUI(false);
-    hideAdminElements();
-    await renderPosts();
-    await updateCounts();
+    updateAdminUI(false);
+    window.location.reload();
 }
 
-// Update login button UI
-function updateLoginUI(loggedIn) {
+function updateAdminUI(isAdmin) {
+    const adminElements = document.querySelectorAll('.admin-only');
+    const visitorElements = document.querySelectorAll('.visitor-only');
     const loginBtn = document.getElementById('loginBtn');
-    const loginBtnText = document.getElementById('loginBtnText');
     const adminBadge = document.getElementById('adminBadge');
     
-    // Logout icon SVG
-    const logoutIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-    </svg>`;
+    adminElements.forEach(el => el.style.display = isAdmin ? '' : 'none');
+    visitorElements.forEach(el => el.style.display = isAdmin ? 'none' : '');
     
-    // Login icon SVG
-    const loginIcon = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-    </svg>`;
-    
-    if (loggedIn) {
-        if (loginBtn) {
-            loginBtn.classList.add('logged-in');
-            const svgEl = loginBtn.querySelector('svg');
-            if (svgEl) svgEl.outerHTML = logoutIcon;
-        }
-        if (loginBtnText) loginBtnText.textContent = 'Logout';
-        if (adminBadge) adminBadge.style.display = 'inline-block';
-    } else {
-        if (loginBtn) {
-            loginBtn.classList.remove('logged-in');
-            const svgEl = loginBtn.querySelector('svg');
-            if (svgEl) svgEl.outerHTML = loginIcon;
-        }
-        if (loginBtnText) loginBtnText.textContent = 'Login';
-        if (adminBadge) adminBadge.style.display = 'none';
+    if (loginBtn) {
+        loginBtn.querySelector('span').textContent = isAdmin ? 'Logout' : 'Login';
+    }
+    if (adminBadge) {
+        adminBadge.style.display = isAdmin ? 'inline-flex' : 'none';
     }
 }
 
-async function fetchPublicPosts() {
+// ═══════════════════════════════════════════════════════════════
+// POSTS MANAGEMENT
+// ═══════════════════════════════════════════════════════════════
+function getLocalPosts() {
     try {
-        const response = await fetch('posts.json');
-        if (response.ok) {
-            publicPosts = await response.json();
+        return JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY) || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveLocalPosts(posts) {
+    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(posts));
+}
+
+async function getAllPosts() {
+    // Try Supabase first
+    if (supabase) {
+        try {
+            const { data, error } = await supabase
+                .from('posts')
+                .select('*')
+                .order('timestamp', { ascending: false });
+            
+            if (!error && data && data.length > 0) {
+                return data;
+            }
+        } catch (e) {
+            console.log('Supabase fetch failed:', e);
+        }
+    }
+    
+    // Fallback to local + samples
+    const localPosts = getLocalPosts();
+    const allPosts = [...localPosts, ...samplePosts];
+    return allPosts.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+async function createPost(text, mood, image = null, audio = null) {
+    const now = new Date();
+    const newPost = {
+        id: 'post-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+        text: text.trim(),
+        mood,
+        date: now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        timestamp: now.getTime(),
+        image,
+        audio,
+    };
+    
+    // Save locally
+    const localPosts = getLocalPosts();
+    localPosts.unshift({ ...newPost, isSample: false });
+    saveLocalPosts(localPosts);
+    
+    // Sync to Supabase
+    if (supabase) {
+        updateSyncStatus('syncing');
+        try {
+            await supabase.from('posts').insert(newPost);
+            updateSyncStatus('synced');
+        } catch (e) {
+            console.log('Supabase sync failed:', e);
+            updateSyncStatus('local');
+        }
+    }
+    
+    updateStreak();
+    return newPost;
+}
+
+async function deletePost(postId) {
+    // Security check - only admin can delete
+    if (!IS_ADMIN || !currentUser) {
+        console.log('Unauthorized delete attempt');
+        return false;
+    }
+    
+    // Remove locally
+    const localPosts = getLocalPosts();
+    const filtered = localPosts.filter(p => p.id !== postId);
+    saveLocalPosts(filtered);
+    
+    // Remove from Supabase
+    if (supabase) {
+        updateSyncStatus('syncing');
+        try {
+            await supabase.from('posts').delete().eq('id', postId);
+            updateSyncStatus('synced');
+        } catch (e) {
+            updateSyncStatus('local');
+        }
+    }
+    
+    return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REACTIONS (for visitors)
+// ═══════════════════════════════════════════════════════════════
+function getSessionId() {
+    let sessionId = sessionStorage.getItem('moodring_session');
+    if (!sessionId) {
+        sessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem('moodring_session', sessionId);
+    }
+    return sessionId;
+}
+
+async function getReactions(postId) {
+    if (!supabase) return {};
+    
+    try {
+        const { data } = await supabase
+            .from('reactions')
+            .select('reaction_type')
+            .eq('post_id', postId);
+        
+        const counts = { '❤️': 0, '👍': 0, '😂': 0, '🔥': 0, '💭': 0 };
+        data?.forEach(r => {
+            if (counts[r.reaction_type] !== undefined) {
+                counts[r.reaction_type]++;
+            }
+        });
+        return counts;
+    } catch (e) {
+        return {};
+    }
+}
+
+async function toggleReaction(postId, reactionType) {
+    if (!supabase) return null;
+    
+    const sessionId = getSessionId();
+    
+    try {
+        const { data: existing } = await supabase
+            .from('reactions')
+            .select('id')
+            .eq('post_id', postId)
+            .eq('reaction_type', reactionType)
+            .eq('session_id', sessionId)
+            .single();
+        
+        if (existing) {
+            await supabase.from('reactions').delete().eq('id', existing.id);
+            return false;
+        } else {
+            await supabase.from('reactions').insert({
+                post_id: postId,
+                reaction_type: reactionType,
+                session_id: sessionId
+            });
+            return true;
         }
     } catch (e) {
-        console.log('Could not load posts.json:', e);
-        publicPosts = [];
+        return null;
     }
-    return publicPosts;
 }
 
 // ═══════════════════════════════════════════════════════════════
 // VISITOR COUNTER
 // ═══════════════════════════════════════════════════════════════
-async function incrementVisitorCount() {
-    if (!supabase) return;
-    try {
-        // Increment the counter
-        await supabase.rpc('increment_visitor_count').catch(() => {
-            // If RPC doesn't exist, do manual increment
-            return supabase
-                .from('visitors')
-                .update({ count: supabase.sql`count + 1` })
-                .eq('id', 1);
-        });
-    } catch (e) {
-        console.log('Visitor count increment failed:', e);
-    }
-}
-
-async function fetchVisitorCount() {
-    if (!supabase) return;
-    try {
-        const { data, error } = await supabase
-            .from('visitors')
-            .select('count')
-            .eq('id', 1)
-            .single();
-        
-        if (data) {
-            const countEl = document.getElementById('visitorCount');
-            if (countEl) countEl.textContent = data.count.toLocaleString();
-        }
-    } catch (e) {
-        console.log('Visitor count fetch failed:', e);
-    }
-}
-
 async function trackVisitor() {
-    // Only count unique visits (once per session)
-    if (sessionStorage.getItem('visited')) return;
+    if (sessionStorage.getItem('visited') || !supabase) return;
     sessionStorage.setItem('visited', 'true');
     
-    if (!supabase) return;
     try {
-        // Simple increment
         const { data } = await supabase
             .from('visitors')
             .select('count')
@@ -289,571 +368,136 @@ async function trackVisitor() {
                 .update({ count: data.count + 1 })
                 .eq('id', 1);
         }
-    } catch (e) {
-        console.log('Track visitor failed:', e);
-    }
+    } catch (e) {}
+    
     fetchVisitorCount();
 }
 
-// ═══════════════════════════════════════════════════════════════
-// REACTIONS
-// ═══════════════════════════════════════════════════════════════
-function getSessionId() {
-    let sessionId = sessionStorage.getItem('reaction_session_id');
-    if (!sessionId) {
-        sessionId = 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        sessionStorage.setItem('reaction_session_id', sessionId);
-    }
-    return sessionId;
-}
-
-async function fetchReactions(postId) {
-    if (!supabase) return {};
-    try {
-        const { data, error } = await supabase
-            .from('reactions')
-            .select('reaction_type')
-            .eq('post_id', postId);
-        
-        if (error) throw error;
-        
-        // Count reactions by type
-        const counts = {};
-        const reactions = ['❤️', '👍', '😂', '🔥', '💭'];
-        reactions.forEach(r => counts[r] = 0);
-        
-        if (data) {
-            data.forEach(r => {
-                if (counts[r.reaction_type] !== undefined) {
-                    counts[r.reaction_type]++;
-                }
-            });
-        }
-        
-        return counts;
-    } catch (e) {
-        console.log('Fetch reactions failed:', e);
-        return {};
-    }
-}
-
-async function toggleReaction(postId, reactionType) {
-    if (!supabase) return null;
-    
-    const sessionId = getSessionId();
+async function fetchVisitorCount() {
+    if (!supabase) return;
     
     try {
-        // Check if already reacted
-        const { data: existing } = await supabase
-            .from('reactions')
-            .select('id')
-            .eq('post_id', postId)
-            .eq('reaction_type', reactionType)
-            .eq('session_id', sessionId)
+        const { data } = await supabase
+            .from('visitors')
+            .select('count')
+            .eq('id', 1)
             .single();
         
-        if (existing) {
-            // Remove reaction
-            const { error } = await supabase
-                .from('reactions')
-                .delete()
-                .eq('post_id', postId)
-                .eq('reaction_type', reactionType)
-                .eq('session_id', sessionId);
-            
-            if (error) throw error;
-            return false; // Removed
-        } else {
-            // Add reaction
-            const { error } = await supabase
-                .from('reactions')
-                .insert({
-                    post_id: postId,
-                    reaction_type: reactionType,
-                    session_id: sessionId
-                });
-            
-            if (error) throw error;
-            return true; // Added
+        if (data) {
+            const el = document.getElementById('visitorCount');
+            if (el) el.textContent = data.count.toLocaleString();
         }
-    } catch (e) {
-        console.log('Toggle reaction failed:', e);
-        return null;
-    }
+    } catch (e) {}
 }
 
-async function loadAllReactions(posts) {
+// ═══════════════════════════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════════════════════════
+async function renderPosts() {
+    const postsList = document.getElementById('postsList');
+    const resultsCount = document.getElementById('resultsCount');
+    
+    if (!postsList) return;
+    
+    postsList.innerHTML = '<div class="loading-posts">Loading...</div>';
+    
+    let posts = await getAllPosts();
+    
+    // Filter by mood
+    if (currentFilter !== 'all') {
+        posts = posts.filter(p => p.mood === currentFilter);
+    }
+    
+    // Search
+    if (searchQuery) {
+        posts = posts.filter(p => 
+            p.text.toLowerCase().includes(searchQuery) ||
+            p.date.toLowerCase().includes(searchQuery)
+        );
+    }
+    
+    if (resultsCount) {
+        resultsCount.textContent = searchQuery ? `${posts.length} result${posts.length !== 1 ? 's' : ''}` : '';
+    }
+    
+    if (posts.length === 0) {
+        postsList.innerHTML = `
+            <div class="empty-state">
+                <p>${searchQuery ? 'No posts match your search.' : 'No posts yet.'}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    postsList.innerHTML = posts.map(post => renderPostCard(post)).join('');
+    
+    // Load reactions
     for (const post of posts) {
-        const reactions = await fetchReactions(post.id);
-        const reactionsList = ['❤️', '👍', '😂', '🔥', '💭'];
-        
-        reactionsList.forEach(reaction => {
-            const countEl = document.getElementById(`reaction-${post.id}-${reaction}`);
-            if (countEl) {
-                const count = reactions[reaction] || 0;
-                countEl.textContent = count > 0 ? count : '';
-            }
+        const reactions = await getReactions(post.id);
+        Object.entries(reactions).forEach(([emoji, count]) => {
+            const el = document.getElementById(`reaction-${post.id}-${emoji}`);
+            if (el) el.textContent = count > 0 ? count : '';
         });
     }
 }
 
-function hideAdminElements() {
-    // Hide write/edit elements for non-admins
-    const adminElements = [
-        '.compose-bar',
-        '.write-btn',
-        '.delete-btn',
-        '.weather-suggestion',
-        '#randomBtn',
-        '#statsBtn',
-        '#exportBtn',
-        '#publishBtn',
-        '.streak-indicator',
-        '#syncStatus'
-    ];
+function renderPostCard(post) {
+    const isOwner = IS_ADMIN && !post.isSample;
     
-    adminElements.forEach(selector => {
-        document.querySelectorAll(selector).forEach(el => {
-            el.style.display = 'none';
-        });
-    });
-    
-    // Add "Read Only" indicator for visitors
-    const header = document.querySelector('.profile-header');
-    if (header && !document.querySelector('.visitor-badge')) {
-        const badge = document.createElement('div');
-        badge.className = 'visitor-badge';
-        badge.innerHTML = 'Reading Mode';
-        badge.style.cssText = 'font-size: 12px; color: var(--text-muted); margin-top: 8px; padding: 4px 12px; background: var(--border-color); border-radius: 12px; display: inline-block;';
-        header.appendChild(badge);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SUPABASE INITIALIZATION
-// ═══════════════════════════════════════════════════════════════
-let supabase = null;
-
-function initSupabase() {
-    if (API_CONFIG.SUPABASE_URL && API_CONFIG.SUPABASE_KEY) {
-        try {
-            if (window.supabase && window.supabase.createClient) {
-                supabase = window.supabase.createClient(API_CONFIG.SUPABASE_URL, API_CONFIG.SUPABASE_KEY);
-                updateSyncStatus('synced');
-                return true;
-            }
-        } catch (e) {
-            console.log('Supabase init skipped:', e);
-        }
-    }
-    updateSyncStatus('local');
-    return false;
-}
-
-function updateSyncStatus(status) {
-    const syncEl = document.getElementById('syncStatus');
-    const textEl = syncEl.querySelector('.sync-text');
-    
-    syncEl.classList.remove('synced', 'syncing');
-    
-    if (status === 'synced') {
-        syncEl.classList.add('synced');
-        textEl.textContent = 'Synced';
-    } else if (status === 'syncing') {
-        syncEl.classList.add('syncing');
-        textEl.textContent = 'Syncing...';
-    } else {
-        textEl.textContent = 'Local';
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// LOCAL STORAGE FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
-function getUserPosts() {
-    try {
-        const stored = localStorage.getItem(CONFIG.STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-        return [];
-    }
-}
-
-function saveUserPosts(posts) {
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(posts));
-}
-
-// Fetch posts from Supabase
-async function fetchSupabasePosts() {
-    if (!supabase) return [];
-    try {
-        const { data, error } = await supabase
-            .from('posts')
-            .select('*')
-            .order('timestamp', { ascending: false });
-        if (error) throw error;
-        return data || [];
-    } catch (e) {
-        console.log('Supabase fetch failed:', e);
-        return [];
-    }
-}
-
-async function getAllPosts() {
-    // If Supabase is configured, use it for everyone (admin & visitors)
-    if (supabase) {
-        const posts = await fetchSupabasePosts();
-        if (posts.length > 0) {
-            return posts;
-        }
-    }
-    
-    // Fallback: PUBLIC MODE - Show posts from posts.json
-    if (!IS_ADMIN) {
-        if (publicPosts.length === 0) {
-            await fetchPublicPosts();
-        }
-        return publicPosts.sort((a, b) => b.timestamp - a.timestamp);
-    }
-    
-    // Fallback: ADMIN MODE - Show user's local posts
-    let userPosts = getUserPosts();
-    
-    // If Supabase is configured, try to fetch from cloud
-    if (supabase) {
-        try {
-            const { data, error } = await supabase
-                .from('posts')
-                .select('*')
-                .order('timestamp', { ascending: false });
+    return `
+        <article class="post-card ${post.mood}" data-id="${post.id}">
+            <div class="post-meta">
+                <span class="post-mood ${post.mood}">${moodEmojis[post.mood]} ${moodLabels[post.mood]}</span>
+                <span class="post-date">${post.date}</span>
+                <span class="post-reading-time">${calculateReadingTime(post.text)}</span>
+                ${isOwner ? `
+                    <div class="post-actions admin-only">
+                        <button class="delete-btn" onclick="handleDelete('${post.id}')" title="Delete">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
             
-            if (!error && data) {
-                userPosts = data;
-                saveUserPosts(userPosts); // Cache locally
-            }
-        } catch (e) {
-            console.log('Supabase fetch failed, using local:', e);
-        }
-    }
-    
-    const allPosts = [...userPosts, ...samplePosts];
-    return allPosts.sort((a, b) => b.timestamp - a.timestamp);
-}
-
-async function addPost(text, mood, image = null, audio = null) {
-    const now = new Date();
-    const newPost = {
-        id: 'post-' + Date.now(),
-        text: text.trim(),
-        mood,
-        date: now.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        }),
-        timestamp: now.getTime(),
-        image: image,
-        audio: audio
-    };
-    
-    // Save locally first (with isSample for local filtering)
-    const localPost = { ...newPost, isSample: false };
-    const userPosts = getUserPosts();
-    userPosts.unshift(localPost);
-    saveUserPosts(userPosts);
-    
-    // Sync to Supabase if configured (only send fields that exist in table)
-    if (supabase) {
-        updateSyncStatus('syncing');
-        try {
-            const supabasePost = {
-                id: newPost.id,
-                text: newPost.text,
-                mood: newPost.mood,
-                date: newPost.date,
-                timestamp: newPost.timestamp,
-                image: newPost.image,
-                audio: newPost.audio
-            };
-            const { error } = await supabase.from('posts').insert(supabasePost);
-            if (error) {
-                console.error('Supabase insert error:', error);
-                updateSyncStatus('local');
-            } else {
-                updateSyncStatus('synced');
-            }
-        } catch (e) {
-            console.log('Supabase sync failed:', e);
-            updateSyncStatus('local');
-        }
-    }
-    
-    updateStreak();
-    return newPost;
-}
-
-async function deletePost(id) {
-    const userPosts = getUserPosts();
-    const filtered = userPosts.filter(p => p.id !== id);
-    saveUserPosts(filtered);
-    
-    // Delete from Supabase if configured
-    if (supabase) {
-        updateSyncStatus('syncing');
-        try {
-            await supabase.from('posts').delete().eq('id', id);
-            updateSyncStatus('synced');
-        } catch (e) {
-            console.log('Supabase delete failed:', e);
-            updateSyncStatus('local');
-        }
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// THEME (DARK/LIGHT MODE)
-// ═══════════════════════════════════════════════════════════════
-function initTheme() {
-    const savedTheme = localStorage.getItem(CONFIG.THEME_KEY);
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const theme = savedTheme || (prefersDark ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', theme);
-}
-
-function toggleTheme() {
-    const current = document.documentElement.getAttribute('data-theme');
-    const newTheme = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem(CONFIG.THEME_KEY, newTheme);
-}
-
-// ═══════════════════════════════════════════════════════════════
-// WEATHER API (OpenWeatherMap)
-// ═══════════════════════════════════════════════════════════════
-const weatherMoodMap = {
-    'Rain': { mood: 'blue', suggestion: "Rainy day... perfect for melancholic thoughts?" },
-    'Drizzle': { mood: 'blue', suggestion: "Light drizzle outside... feeling reflective?" },
-    'Thunderstorm': { mood: 'red', suggestion: "Storm brewing... channel that energy!" },
-    'Snow': { mood: 'blue', suggestion: "Snow falling... a quiet, contemplative mood?" },
-    'Clear': { mood: 'yellow', suggestion: "Clear skies... feeling bright today?" },
-    'Clouds': { mood: 'blue', suggestion: "Cloudy day... time for deep thoughts?" },
-    'Mist': { mood: 'blue', suggestion: "Misty morning... what's on your mind?" },
-    'Fog': { mood: 'blue', suggestion: "Foggy day... perfect for introspection." }
-};
-
-const weatherEmojis = {
-    'Clear': '☀️', 'Clouds': '☁️', 'Rain': '🌧️', 'Drizzle': '🌦️',
-    'Thunderstorm': '⛈️', 'Snow': '❄️', 'Mist': '🌫️', 'Fog': '🌫️',
-    'Haze': '🌫️', 'Smoke': '💨', 'Dust': '💨'
-};
-
-async function fetchWeather() {
-    const weatherWidget = document.getElementById('weatherWidget');
-    
-    if (!API_CONFIG.OPENWEATHER_KEY) {
-        if (weatherWidget) weatherWidget.style.display = 'none';
-        return;
-    }
-    
-    try {
-        const response = await fetch(
-            `https://api.openweathermap.org/data/2.5/weather?q=${API_CONFIG.WEATHER_CITY}&appid=${API_CONFIG.OPENWEATHER_KEY}&units=metric`
-        );
-        
-        // Check if API key is valid
-        if (!response.ok) {
-            console.log('Weather API: Key may not be activated yet (takes up to 2 hours for new keys)');
-            if (weatherWidget) weatherWidget.style.display = 'none';
-            return;
-        }
-        
-        const data = await response.json();
-        
-        if (data.main && data.weather) {
-            const weather = data.weather[0].main;
-            const temp = Math.round(data.main.temp);
-            const desc = data.weather[0].description;
+            <div class="post-content">${parseMarkdown(post.text)}</div>
             
-            const weatherIcon = document.getElementById('weatherIcon');
-            const weatherTemp = document.getElementById('weatherTemp');
-            const weatherDesc = document.getElementById('weatherDesc');
-            const suggestionText = document.querySelector('.suggestion-text');
-            const suggestionBtn = document.getElementById('suggestionBtn');
+            ${post.image ? `<div class="post-image"><img src="${post.image}" alt="Post image" loading="lazy"></div>` : ''}
+            ${post.audio ? `<div class="post-audio"><audio controls src="${post.audio}"></audio></div>` : ''}
             
-            if (weatherIcon) weatherIcon.textContent = weatherEmojis[weather] || '🌤️';
-            if (weatherTemp) weatherTemp.textContent = `${temp}°C`;
-            if (weatherDesc) weatherDesc.textContent = desc.charAt(0).toUpperCase() + desc.slice(1);
-            
-            const moodSuggestion = weatherMoodMap[weather] || { mood: 'yellow', suggestion: "How are you feeling?" };
-            if (suggestionText) suggestionText.textContent = moodSuggestion.suggestion;
-            if (suggestionBtn) suggestionBtn.dataset.mood = moodSuggestion.mood;
-            
-            if (weatherWidget) weatherWidget.style.display = 'flex';
-        }
-    } catch (e) {
-        // Silently fail - don't show errors for weather
-        if (weatherWidget) weatherWidget.style.display = 'none';
-    }
+            <div class="post-footer">
+                <div class="reactions-buttons">
+                    ${['❤️', '👍', '😂', '🔥', '💭'].map(emoji => `
+                        <button class="reaction-btn" data-post-id="${post.id}" data-reaction="${emoji}">
+                            <span>${emoji}</span>
+                            <span class="reaction-count" id="reaction-${post.id}-${emoji}"></span>
+                        </button>
+                    `).join('')}
+                </div>
+                <div class="share-actions">
+                    <button class="share-btn" onclick="toggleShareMenu('${post.id}')" title="Share">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                    </button>
+                    <div class="share-menu" id="share-menu-${post.id}">
+                        <button onclick="shareToTwitter(\`${escapeForAttr(post.text)}\`)">Share on X</button>
+                        <button onclick="copyToClipboard(\`${escapeForAttr(post.text)}\`)">Copy text</button>
+                    </div>
+                </div>
+            </div>
+        </article>
+    `;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// QUOTES API (Quotable.io - Free, No Key Required)
-// ═══════════════════════════════════════════════════════════════
-async function fetchQuote() {
-    const refreshBtn = document.getElementById('quoteRefresh');
-    if (refreshBtn) refreshBtn.classList.add('loading');
+async function updateCounts() {
+    const posts = await getAllPosts();
     
-    // Use fallback quotes directly (APIs often have CORS issues from localhost)
-    const quote = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
-    
-    const quoteText = document.getElementById('quoteText');
-    const quoteAuthor = document.getElementById('quoteAuthor');
-    
-    if (quoteText && quoteAuthor) {
-        quoteText.textContent = `"${quote.text}"`;
-        quoteAuthor.textContent = `— ${quote.author}`;
-    }
-    
-    if (refreshBtn) refreshBtn.classList.remove('loading');
-}
-
-// ═══════════════════════════════════════════════════════════════
-// UNSPLASH BACKGROUND IMAGES
-// ═══════════════════════════════════════════════════════════════
-const unsplashQueries = {
-    blue: 'moody,rain,ocean,melancholy',
-    yellow: 'sunshine,happy,bright,nature',
-    red: 'fire,passion,energy,storm',
-    all: 'aesthetic,minimal,nature'
-};
-
-async function fetchBackground(mood = 'all') {
-    if (!API_CONFIG.UNSPLASH_KEY) return;
-    
-    const overlay = document.getElementById('bgOverlay');
-    const query = unsplashQueries[mood] || unsplashQueries.all;
-    
-    try {
-        const response = await fetch(
-            `https://api.unsplash.com/photos/random?query=${query}&orientation=landscape&client_id=${API_CONFIG.UNSPLASH_KEY}`
-        );
-        const data = await response.json();
-        
-        if (data.urls) {
-            const img = new Image();
-            img.onload = () => {
-                overlay.style.backgroundImage = `url(${data.urls.regular})`;
-                overlay.classList.add('visible');
-            };
-            img.src = data.urls.regular;
-        }
-    } catch (e) {
-        console.log('Unsplash fetch failed:', e);
-    }
-}
-
-// ═══════════════════════════════════════════════════════════════
-// SPOTIFY INTEGRATION (Requires OAuth)
-// ═══════════════════════════════════════════════════════════════
-// Note: Full Spotify integration requires setting up OAuth flow
-// This is a placeholder that shows the widget structure
-
-function initSpotify() {
-    if (!API_CONFIG.SPOTIFY_CLIENT_ID) {
-        document.getElementById('spotifyWidget').style.display = 'none';
-        return;
-    }
-    
-    // Check for access token in URL hash (after OAuth redirect)
-    const hash = window.location.hash;
-    if (hash.includes('access_token')) {
-        const token = hash.split('access_token=')[1].split('&')[0];
-        localStorage.setItem('spotify_token', token);
-        window.location.hash = '';
-        fetchNowPlaying(token);
-    } else {
-        const savedToken = localStorage.getItem('spotify_token');
-        if (savedToken) {
-            fetchNowPlaying(savedToken);
-        }
-    }
-    
-    document.getElementById('spotifyWidget').style.display = 'block';
-}
-
-async function fetchNowPlaying(token) {
-    try {
-        const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.status === 200) {
-            const data = await response.json();
-            if (data.item) {
-                document.getElementById('spotifyTrack').textContent = data.item.name;
-                document.getElementById('spotifyArtist').textContent = data.item.artists.map(a => a.name).join(', ');
-            }
-        } else if (response.status === 204) {
-            document.getElementById('spotifyTrack').textContent = 'Nothing playing';
-            document.getElementById('spotifyArtist').textContent = 'Start some music!';
-        }
-    } catch (e) {
-        console.log('Spotify fetch failed:', e);
-    }
-}
-
-function connectSpotify() {
-    const scopes = 'user-read-currently-playing user-read-playback-state';
-    const authUrl = `https://accounts.spotify.com/authorize?client_id=${API_CONFIG.SPOTIFY_CLIENT_ID}&response_type=token&redirect_uri=${encodeURIComponent(API_CONFIG.SPOTIFY_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}`;
-    window.location.href = authUrl;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// AI WRITING PROMPTS (OpenAI or Fallback)
-// ═══════════════════════════════════════════════════════════════
-let currentPromptMood = null;
-
-async function fetchAIPrompt(mood) {
-    currentPromptMood = mood;
-    const promptText = document.getElementById('aiPromptText');
-    const refreshBtn = document.getElementById('aiRefresh');
-    
-    refreshBtn.classList.add('loading');
-    
-    if (API_CONFIG.OPENAI_KEY) {
-        try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_CONFIG.OPENAI_KEY}`
-                },
-                body: JSON.stringify({
-                    model: 'gpt-3.5-turbo',
-                    messages: [{
-                        role: 'user',
-                        content: `Give me a single creative, introspective writing prompt for someone feeling ${mood === 'blue' ? 'melancholic or reflective' : mood === 'yellow' ? 'happy and vibrant' : 'passionate or frustrated'}. Keep it under 20 words. Just the prompt, no quotes or explanation.`
-                    }],
-                    max_tokens: 50,
-                    temperature: 0.9
-                })
-            });
-            
-            const data = await response.json();
-            if (data.choices && data.choices[0]) {
-                promptText.textContent = data.choices[0].message.content;
-                refreshBtn.classList.remove('loading');
-                return;
-            }
-        } catch (e) {
-            console.log('OpenAI fetch failed:', e);
-        }
-    }
-    
-    // Fallback to local prompts
-    const prompts = FALLBACK_PROMPTS[mood] || FALLBACK_PROMPTS.yellow;
-    promptText.textContent = prompts[Math.floor(Math.random() * prompts.length)];
-    refreshBtn.classList.remove('loading');
+    document.getElementById('countAll').textContent = posts.length;
+    document.getElementById('countBlue').textContent = posts.filter(p => p.mood === 'blue').length;
+    document.getElementById('countYellow').textContent = posts.filter(p => p.mood === 'yellow').length;
+    document.getElementById('countRed').textContent = posts.filter(p => p.mood === 'red').length;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -861,8 +505,7 @@ async function fetchAIPrompt(mood) {
 // ═══════════════════════════════════════════════════════════════
 function getStreakData() {
     try {
-        const stored = localStorage.getItem(CONFIG.STREAK_KEY);
-        return stored ? JSON.parse(stored) : { count: 0, lastDate: null };
+        return JSON.parse(localStorage.getItem(CONFIG.STREAK_KEY) || '{"count":0,"lastDate":null}');
     } catch (e) {
         return { count: 0, lastDate: null };
     }
@@ -880,7 +523,7 @@ function updateStreak() {
     
     if (lastDate === yesterday.toDateString()) {
         streak.count += 1;
-    } else if (lastDate !== today) {
+    } else {
         streak.count = 1;
     }
     
@@ -895,645 +538,75 @@ function displayStreak() {
     const banner = document.getElementById('streakBanner');
     const text = document.getElementById('streakText');
     
-    if (streak.count >= 2) {
+    if (banner && streak.count >= 2) {
         banner.style.display = 'flex';
-        text.textContent = `${streak.count} day streak`;
-    } else {
+        if (text) text.textContent = `${streak.count} day streak`;
+    } else if (banner) {
         banner.style.display = 'none';
     }
 }
 
 // ═══════════════════════════════════════════════════════════════
-// READING TIME
+// UTILITY FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
-function calculateReadingTime(text) {
-    const words = text.trim().split(/\s+/).length;
-    const minutes = Math.ceil(words / CONFIG.WORDS_PER_MINUTE);
-    return minutes < 1 ? '< 1 min read' : `${minutes} min read`;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// MARKDOWN PARSING
-// ═══════════════════════════════════════════════════════════════
-function parseMarkdown(text) {
-    if (typeof marked !== 'undefined') {
-        marked.setOptions({ breaks: true, gfm: true });
-        return marked.parse(text);
-    }
-    return escapeHtml(text)
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>');
-}
-
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// EXPORT POSTS
-// ═══════════════════════════════════════════════════════════════
-function exportPosts() {
-    const userPosts = getUserPosts();
-    
-    if (userPosts.length === 0) {
-        showToast('No posts to export');
-        return;
+function escapeForAttr(text) {
+    return text.replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/"/g, '\\"');
+}
+
+function parseMarkdown(text) {
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({ breaks: true, gfm: true });
+        return marked.parse(text);
     }
-    
-    const exportData = {
-        exportDate: new Date().toISOString(),
-        totalPosts: userPosts.length,
-        posts: userPosts
-    };
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `aashish-blog-export-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showToast(`Exported ${userPosts.length} posts`);
+    return escapeHtml(text).replace(/\n/g, '<br>');
 }
 
-// Publish posts - creates the posts.json file format
-function publishPosts() {
-    const userPosts = getUserPosts();
-    
-    if (userPosts.length === 0) {
-        showToast('No posts to publish');
-        return;
-    }
-    
-    // Clean posts for publishing (remove sample posts, keep only essential fields)
-    const publishData = userPosts.map(post => ({
-        id: post.id,
-        text: post.text,
-        mood: post.mood,
-        date: post.date,
-        timestamp: post.timestamp,
-        image: post.image || null,
-        audio: post.audio || null
-    }));
-    
-    const blob = new Blob([JSON.stringify(publishData, null, 4)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'posts.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    showToast(`Published ${userPosts.length} posts! Replace your posts.json file with this.`);
+function calculateReadingTime(text) {
+    const words = text.trim().split(/\s+/).length;
+    const minutes = Math.ceil(words / CONFIG.WORDS_PER_MINUTE);
+    return minutes < 1 ? '< 1 min read' : `${minutes} min read`;
 }
 
-// ═══════════════════════════════════════════════════════════════
-// SHARE FUNCTIONALITY
-// ═══════════════════════════════════════════════════════════════
-function shareToTwitter(text) {
-    const truncated = text.length > 250 ? text.substring(0, 247) + '...' : text;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(truncated)}`;
-    window.open(url, '_blank', 'width=550,height=420');
-}
-
-function shareToWhatsApp(text) {
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
-}
-
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-        showToast('Copied to clipboard');
-    }).catch(() => {
-        showToast('Failed to copy');
-    });
-}
-
-function toggleShareMenu(postId) {
-    document.querySelectorAll('.share-menu').forEach(menu => {
-        if (menu.id !== `share-menu-${postId}`) {
-            menu.classList.remove('visible');
-        }
-    });
-    
-    const menu = document.getElementById(`share-menu-${postId}`);
-    if (menu) menu.classList.toggle('visible');
-}
-
-document.addEventListener('click', (e) => {
-    if (!e.target.closest('.share-btn') && !e.target.closest('.share-menu')) {
-        document.querySelectorAll('.share-menu').forEach(menu => {
-            menu.classList.remove('visible');
-        });
-    }
-});
-
-// ═══════════════════════════════════════════════════════════════
-// TOAST NOTIFICATION
-// ═══════════════════════════════════════════════════════════════
 function showToast(message) {
     const toast = document.getElementById('toast');
     const toastMessage = document.getElementById('toastMessage');
+    if (!toast || !toastMessage) return;
+    
     toastMessage.textContent = message;
     toast.classList.add('visible');
-    
-    setTimeout(() => {
-        toast.classList.remove('visible');
-    }, 2500);
+    setTimeout(() => toast.classList.remove('visible'), 2500);
 }
 
 // ═══════════════════════════════════════════════════════════════
-// SEARCH FUNCTIONALITY
+// MODAL FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
-let searchQuery = '';
-
-function handleSearch(query) {
-    searchQuery = query.toLowerCase().trim();
-    renderPosts();
-    document.getElementById('searchClear').style.display = query ? 'block' : 'none';
-}
-
-function clearSearch() {
-    document.getElementById('searchInput').value = '';
-    searchQuery = '';
-    document.getElementById('searchClear').style.display = 'none';
-    renderPosts();
-}
-
-// ═══════════════════════════════════════════════════════════════
-// DOM ELEMENTS
-// ═══════════════════════════════════════════════════════════════
-const postsList = document.getElementById('postsList');
-const sectionTitle = document.getElementById('sectionTitle');
-const resultsCount = document.getElementById('resultsCount');
-const filterBtns = document.querySelectorAll('.filter-btn');
-const writeTrigger = document.getElementById('writeTrigger');
-const themeToggle = document.getElementById('themeToggle');
-const exportBtn = document.getElementById('exportBtn');
-const searchInput = document.getElementById('searchInput');
-const searchClear = document.getElementById('searchClear');
-const quoteRefresh = document.getElementById('quoteRefresh');
-const suggestionBtn = document.getElementById('suggestionBtn');
-const aiRefresh = document.getElementById('aiRefresh');
-
-const modalOverlay = document.getElementById('modalOverlay');
-const modalClose = document.getElementById('modalClose');
-const postForm = document.getElementById('postForm');
-const thoughtInput = document.getElementById('thoughtInput');
-const charCount = document.getElementById('charCount');
-const readingTimePreview = document.getElementById('readingTimePreview');
-const submitBtn = document.getElementById('submitBtn');
-const moodOptions = document.querySelectorAll('.mood-option');
-
-// ═══════════════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════════════
-let currentFilter = 'all';
-let selectedMood = null;
-
-const moodLabels = { blue: 'Melancholy', yellow: 'Vibrant', red: 'Fiery' };
-const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
-const sectionTitles = {
-    all: 'All Posts',
-    blue: 'Melancholy Posts',
-    yellow: 'Vibrant Posts',
-    red: 'Fiery Posts'
-};
-
-// ═══════════════════════════════════════════════════════════════
-// EVENT LISTENERS
-// ═══════════════════════════════════════════════════════════════
-if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
-if (exportBtn) exportBtn.addEventListener('click', exportPosts);
-
-const publishBtn = document.getElementById('publishBtn');
-if (publishBtn) publishBtn.addEventListener('click', publishPosts);
-if (searchInput) searchInput.addEventListener('input', (e) => handleSearch(e.target.value));
-if (searchClear) searchClear.addEventListener('click', clearSearch);
-if (quoteRefresh) quoteRefresh.addEventListener('click', fetchQuote);
-
-// Weather suggestion button
-if (suggestionBtn) {
-    suggestionBtn.addEventListener('click', () => {
-        const mood = suggestionBtn.dataset.mood || 'yellow';
-        openModal(mood);
-    });
-}
-
-// AI prompt refresh
-if (aiRefresh) {
-    aiRefresh.addEventListener('click', () => {
-        if (currentPromptMood) {
-            fetchAIPrompt(currentPromptMood);
-        }
-    });
-}
-
-// Filter buttons
-filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        filterBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentFilter = btn.dataset.filter;
-        sectionTitle.textContent = sectionTitles[currentFilter];
-        
-        // Update background for mood
-        if (API_CONFIG.UNSPLASH_KEY) {
-            fetchBackground(currentFilter);
-        }
-        
-        renderPosts();
-    });
-});
-
-// Modal triggers
-if (writeTrigger) writeTrigger.addEventListener('click', () => openModal());
-if (modalClose) modalClose.addEventListener('click', closeModal);
-if (modalOverlay) {
-    modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) closeModal();
-    });
-}
-
-// Login Modal
-const loginBtn = document.getElementById('loginBtn');
-const loginModal = document.getElementById('loginModal');
-const loginModalClose = document.getElementById('loginModalClose');
-const loginForm = document.getElementById('loginForm');
-const loginError = document.getElementById('loginError');
-
-if (loginBtn) {
-    loginBtn.addEventListener('click', async () => {
-        if (currentUser || IS_ADMIN) {
-            // User is logged in, so logout
-            await logout();
-            showToast('Logged out');
-            window.location.reload();
-        } else {
-            // Show login modal
-            if (loginModal) loginModal.classList.add('visible');
-        }
-    });
-}
-
-if (loginModalClose) {
-    loginModalClose.addEventListener('click', () => {
-        if (loginModal) loginModal.classList.remove('visible');
-    });
-}
-
-if (loginModal) {
-    loginModal.addEventListener('click', (e) => {
-        if (e.target === loginModal) loginModal.classList.remove('visible');
-    });
-}
-
-if (loginForm) {
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('loginEmail').value;
-        const password = document.getElementById('loginPassword').value;
-        const submitBtn = document.getElementById('loginSubmit');
-        
-        if (submitBtn) submitBtn.disabled = true;
-        if (loginError) loginError.style.display = 'none';
-        
-        try {
-            await login(email, password);
-            if (loginModal) loginModal.classList.remove('visible');
-            showToast('Logged in successfully!');
-            // Reload to show admin features
-            window.location.reload();
-        } catch (error) {
-            if (loginError) {
-                loginError.textContent = error.message || 'Login failed';
-                loginError.style.display = 'block';
-            }
-        } finally {
-            if (submitBtn) submitBtn.disabled = false;
-        }
-    });
-}
-
-// Reaction button click handler (event delegation)
-document.addEventListener('click', async (e) => {
-    if (e.target.closest('.reaction-btn')) {
-        const btn = e.target.closest('.reaction-btn');
-        const postId = btn.dataset.postId;
-        const reactionType = btn.dataset.reaction;
-        
-        if (!postId || !reactionType) return;
-        
-        btn.disabled = true;
-        const result = await toggleReaction(postId, reactionType);
-        
-        if (result !== null) {
-            // Reload reactions for this post
-            const reactions = await fetchReactions(postId);
-            const reactionsList = ['❤️', '👍', '😂', '🔥', '💭'];
-            
-            reactionsList.forEach(reaction => {
-                const countEl = document.getElementById(`reaction-${postId}-${reaction}`);
-                if (countEl) {
-                    const count = reactions[reaction] || 0;
-                    countEl.textContent = count > 0 ? count : '';
-                }
-            });
-            
-            // Toggle active state
-            if (result) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        }
-        
-        btn.disabled = false;
-    }
-});
-
-// Mood selection in form
-moodOptions.forEach(opt => {
-    opt.addEventListener('click', () => {
-        moodOptions.forEach(o => o.classList.remove('selected'));
-        opt.classList.add('selected');
-        selectedMood = opt.dataset.mood;
-        validateForm();
-        
-        // Fetch AI prompt for selected mood
-        fetchAIPrompt(selectedMood);
-    });
-});
-
-// Editor Toolbar
-const toolbarBtns = document.querySelectorAll('.toolbar-btn');
-toolbarBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const format = btn.dataset.format;
-        if (thoughtInput) {
-            insertFormat(format);
-        }
-    });
-});
-
-function insertFormat(format) {
-    const textarea = thoughtInput;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
-    
-    let before = '';
-    let after = '';
-    let placeholder = '';
-    
-    switch(format) {
-        case 'bold':
-            before = '**';
-            after = '**';
-            placeholder = 'bold text';
-            break;
-        case 'italic':
-            before = '*';
-            after = '*';
-            placeholder = 'italic text';
-            break;
-        case 'underline':
-            before = '<u>';
-            after = '</u>';
-            placeholder = 'underlined text';
-            break;
-        case 'bullet':
-            before = '\n- ';
-            after = '';
-            placeholder = 'list item';
-            break;
-        case 'number':
-            before = '\n1. ';
-            after = '';
-            placeholder = 'list item';
-            break;
-        case 'quote':
-            before = '\n> ';
-            after = '';
-            placeholder = 'quote';
-            break;
-    }
-    
-    const insertion = selectedText || placeholder;
-    const newText = text.substring(0, start) + before + insertion + after + text.substring(end);
-    
-    textarea.value = newText;
-    textarea.focus();
-    
-    // Set cursor position
-    const newCursorPos = start + before.length + insertion.length + after.length;
-    textarea.setSelectionRange(newCursorPos, newCursorPos);
-    
-    // Trigger input event for character count
-    textarea.dispatchEvent(new Event('input'));
-}
-
-// Text input
-if (thoughtInput) {
-    thoughtInput.addEventListener('input', () => {
-        const text = thoughtInput.value;
-        if (charCount) charCount.textContent = text.length;
-        if (readingTimePreview) readingTimePreview.textContent = calculateReadingTime(text);
-        validateForm();
-    });
-}
-
-// Form submission
-if (postForm) {
-    postForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (selectedMood && thoughtInput && thoughtInput.value.trim()) {
-            const scheduleDate = document.getElementById('scheduleDate')?.value;
-            
-            if (scheduleDate && new Date(scheduleDate) > new Date()) {
-                // Schedule for later
-                schedulePost({
-                    text: thoughtInput.value,
-                    mood: selectedMood,
-                    image: currentPostImage,
-                    audio: currentPostAudio
-                }, scheduleDate);
-            } else {
-                // Publish now
-                await addPost(thoughtInput.value, selectedMood, currentPostImage, currentPostAudio);
-                showToast('Post published!');
-            }
-            
-            // Clear draft and reset
-            clearDraft();
-            currentPostImage = null;
-            currentPostAudio = null;
-            removeImage();
-            removeAudio();
-            closeModal();
-            await renderPosts();
-            updateCounts();
-        }
-    });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// RENDER FUNCTIONS
-// ═══════════════════════════════════════════════════════════════
-async function renderPosts() {
-    let allPosts = await getAllPosts();
-    
-    let filtered = currentFilter === 'all' 
-        ? allPosts 
-        : allPosts.filter(p => p.mood === currentFilter);
-    
-    if (searchQuery) {
-        filtered = filtered.filter(p => 
-            p.text.toLowerCase().includes(searchQuery) ||
-            p.date.toLowerCase().includes(searchQuery) ||
-            moodLabels[p.mood].toLowerCase().includes(searchQuery)
-        );
-    }
-    
-    if (searchQuery) {
-        resultsCount.textContent = `${filtered.length} result${filtered.length !== 1 ? 's' : ''}`;
-    } else {
-        resultsCount.textContent = '';
-    }
-
-    if (filtered.length === 0) {
-        postsList.innerHTML = `
-            <div class="empty-state">
-                <p>${searchQuery ? 'No posts match your search.' : 'No posts here yet. Time to write something!'}</p>
-                ${!searchQuery ? `
-                    <button class="write-btn" onclick="openModal()">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                        </svg>
-                        New Post
-                    </button>
-                ` : ''}
-            </div>
-        `;
-        return;
-    }
-
-    postsList.innerHTML = filtered.map(post => `
-        <article class="post-card ${post.isSample ? '' : 'user-post'} ${post.mood}">
-            <div class="post-meta">
-                <span class="post-mood ${post.mood}">${moodEmojis[post.mood]} ${moodLabels[post.mood]}</span>
-                <span class="post-date">${post.date}</span>
-                <span class="post-reading-time">${calculateReadingTime(post.text)}</span>
-                <div class="post-actions">
-                    <div style="position: relative;">
-                        <button class="share-btn" onclick="toggleShareMenu('${post.id}')" title="Share">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                            </svg>
-                        </button>
-                        <div class="share-menu" id="share-menu-${post.id}">
-                            <button class="share-menu-item" onclick="shareToTwitter(\`${escapeForAttr(post.text)}\`)">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                                </svg>
-                                Twitter
-                            </button>
-                            <button class="share-menu-item" onclick="shareToWhatsApp(\`${escapeForAttr(post.text)}\`)">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                                </svg>
-                                WhatsApp
-                            </button>
-                            <button class="share-menu-item" onclick="copyToClipboard(\`${escapeForAttr(post.text)}\`)">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                                Copy text
-                            </button>
-                        </div>
-                    </div>
-                    ${!post.isSample ? `
-                        <button class="delete-btn" onclick="handleDelete('${post.id}')" title="Delete post">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    ` : ''}
-                </div>
-            </div>
-            <div class="post-content">${parseMarkdown(post.text)}</div>
-            ${post.image ? `<div class="post-image"><img src="${post.image}" alt="Post image"></div>` : ''}
-            ${post.audio ? `<div class="post-audio"><audio controls src="${post.audio}"></audio></div>` : ''}
-            <div class="reactions-section" id="reactions-${post.id}">
-                <div class="reactions-buttons">
-                    <button class="reaction-btn" data-post-id="${post.id}" data-reaction="❤️" title="Love">
-                        <span>❤️</span>
-                        <span class="reaction-count" id="reaction-${post.id}-❤️">0</span>
-                    </button>
-                    <button class="reaction-btn" data-post-id="${post.id}" data-reaction="👍" title="Like">
-                        <span>👍</span>
-                        <span class="reaction-count" id="reaction-${post.id}-👍">0</span>
-                    </button>
-                    <button class="reaction-btn" data-post-id="${post.id}" data-reaction="😂" title="Funny">
-                        <span>😂</span>
-                        <span class="reaction-count" id="reaction-${post.id}-😂">0</span>
-                    </button>
-                    <button class="reaction-btn" data-post-id="${post.id}" data-reaction="🔥" title="Fire">
-                        <span>🔥</span>
-                        <span class="reaction-count" id="reaction-${post.id}-🔥">0</span>
-                    </button>
-                    <button class="reaction-btn" data-post-id="${post.id}" data-reaction="💭" title="Thoughtful">
-                        <span>💭</span>
-                        <span class="reaction-count" id="reaction-${post.id}-💭">0</span>
-                    </button>
-                </div>
-            </div>
-        </article>
-    `).join('');
-    
-    // Load reactions for each post
-    loadAllReactions(filtered);
-}
-
-
-function escapeForAttr(text) {
-    return text.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-}
-
-async function updateCounts() {
-    const allPosts = await getAllPosts();
-    document.getElementById('countAll').textContent = allPosts.length;
-    document.getElementById('countBlue').textContent = allPosts.filter(p => p.mood === 'blue').length;
-    document.getElementById('countYellow').textContent = allPosts.filter(p => p.mood === 'yellow').length;
-    document.getElementById('countRed').textContent = allPosts.filter(p => p.mood === 'red').length;
-}
-
 function openModal(preselectedMood = null) {
-    // Only allow admin (you) to write posts
     if (!IS_ADMIN) {
-        showToast('Only Aashish can write posts here');
+        showToast('Only Aashish can write posts');
         return;
     }
+    
+    const modalOverlay = document.getElementById('modalOverlay');
+    const thoughtInput = document.getElementById('thoughtInput');
+    const charCount = document.getElementById('charCount');
+    const moodOptions = document.querySelectorAll('.mood-option');
+    
     if (thoughtInput) thoughtInput.value = '';
     if (charCount) charCount.textContent = '0';
-    if (readingTimePreview) readingTimePreview.textContent = '< 1 min read';
+    
     moodOptions.forEach(o => o.classList.remove('selected'));
     selectedMood = null;
-    currentPromptMood = null;
+    currentPostImage = null;
+    currentPostAudio = null;
+    removeImage();
+    removeAudio();
     
-    const aiPromptText = document.getElementById('aiPromptText');
-    if (aiPromptText) aiPromptText.textContent = 'Select a mood to get a writing prompt...';
-    
-    // Pre-select mood if provided (from weather suggestion)
     if (preselectedMood) {
         const moodBtn = document.querySelector(`.mood-option.${preselectedMood}`);
         if (moodBtn) {
@@ -1549,241 +622,77 @@ function openModal(preselectedMood = null) {
 }
 
 function closeModal() {
+    const modalOverlay = document.getElementById('modalOverlay');
     if (modalOverlay) modalOverlay.classList.remove('visible');
 }
 
 function validateForm() {
+    const thoughtInput = document.getElementById('thoughtInput');
+    const submitBtn = document.getElementById('submitBtn');
+    
     const hasText = thoughtInput && thoughtInput.value.trim().length > 0;
     const hasMood = selectedMood !== null;
+    
     if (submitBtn) submitBtn.disabled = !(hasText && hasMood);
 }
 
-async function handleDelete(id) {
-    if (confirm('Delete this post?')) {
-        await deletePost(id);
-        await renderPosts();
-        await updateCounts();
-        showToast('Post deleted');
-    }
+function showLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.classList.add('visible');
 }
 
-// Make functions available globally
-window.openModal = openModal;
-window.handleDelete = handleDelete;
-window.toggleShareMenu = toggleShareMenu;
-window.shareToTwitter = shareToTwitter;
-window.shareToWhatsApp = shareToWhatsApp;
-window.copyToClipboard = copyToClipboard;
-window.connectSpotify = connectSpotify;
-
-// ═══════════════════════════════════════════════════════════════
-// KEYBOARD SHORTCUTS
-// ═══════════════════════════════════════════════════════════════
-document.addEventListener('keydown', (e) => {
-    // Don't trigger if typing in input/textarea
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    
-    // N - New post
-    if (e.key === 'n' || e.key === 'N') {
-        e.preventDefault();
-        openModal();
-    }
-    
-    // T - Toggle theme
-    if (e.key === 't' || e.key === 'T') {
-        e.preventDefault();
-        toggleTheme();
-    }
-    
-    // Escape - Close modal
-    if (e.key === 'Escape') {
-        closeModal();
-    }
-    
-    // S - Focus search
-    if (e.key === 's' || e.key === 'S') {
-        e.preventDefault();
-        const searchInput = document.getElementById('searchInput');
-        if (searchInput) searchInput.focus();
-    }
-});
-
-// ═══════════════════════════════════════════════════════════════
-// DRAFT AUTO-SAVE
-// ═══════════════════════════════════════════════════════════════
-const DRAFT_KEY = 'moodring_draft';
-
-function saveDraft() {
-    if (!thoughtInput) return;
-    const draft = {
-        text: thoughtInput.value,
-        mood: selectedMood,
-        image: currentPostImage,
-        scheduleDate: document.getElementById('scheduleDate')?.value || '',
-        savedAt: new Date().toISOString()
-    };
-    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-    showToast('Draft saved');
-}
-
-function loadDraft() {
-    const saved = localStorage.getItem(DRAFT_KEY);
-    if (!saved) return null;
-    try {
-        return JSON.parse(saved);
-    } catch {
-        return null;
-    }
-}
-
-function clearDraft() {
-    localStorage.removeItem(DRAFT_KEY);
-}
-
-function restoreDraft() {
-    const draft = loadDraft();
-    if (!draft || !draft.text) return;
-    
-    if (thoughtInput) thoughtInput.value = draft.text;
-    if (charCount) charCount.textContent = draft.text.length;
-    
-    if (draft.mood) {
-        const moodBtn = document.querySelector(`.mood-option.${draft.mood}`);
-        if (moodBtn) {
-            moodOptions.forEach(o => o.classList.remove('selected'));
-            moodBtn.classList.add('selected');
-            selectedMood = draft.mood;
-        }
-    }
-    
-    if (draft.image) {
-        currentPostImage = draft.image;
-        showImagePreview(draft.image);
-    }
-    
-    if (draft.scheduleDate) {
-        const scheduleDateInput = document.getElementById('scheduleDate');
-        if (scheduleDateInput) scheduleDateInput.value = draft.scheduleDate;
-    }
-    
-    validateForm();
-    showToast('Draft restored');
-}
-
-// Auto-save every 10 seconds while typing
-let autoSaveTimer = null;
-if (thoughtInput) {
-    thoughtInput.addEventListener('input', () => {
-        clearTimeout(autoSaveTimer);
-        autoSaveTimer = setTimeout(() => {
-            if (thoughtInput.value.trim()) {
-                saveDraft();
-            }
-        }, 10000);
-    });
+function hideLoginModal() {
+    const modal = document.getElementById('loginModal');
+    if (modal) modal.classList.remove('visible');
 }
 
 // ═══════════════════════════════════════════════════════════════
-// VOICE TO TEXT
+// IMAGE UPLOAD
 // ═══════════════════════════════════════════════════════════════
-let recognition = null;
-let isListening = false;
-
-function initVoiceRecognition() {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        console.log('Speech recognition not supported');
-        return false;
+function handleImageUpload(file) {
+    if (!file || !file.type.startsWith('image/')) {
+        showToast('Please select an image');
+        return;
     }
-    
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-    
-    recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            transcript += event.results[i][0].transcript;
-        }
-        
-        if (thoughtInput && transcript) {
-            const cursorPos = thoughtInput.selectionStart;
-            const text = thoughtInput.value;
-            thoughtInput.value = text.substring(0, cursorPos) + transcript + text.substring(cursorPos);
-            thoughtInput.dispatchEvent(new Event('input'));
-        }
-    };
-    
-    recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        stopVoiceRecognition();
-        showToast('Voice recognition error');
-    };
-    
-    recognition.onend = () => {
-        if (isListening) {
-            recognition.start(); // Restart if still listening
-        }
-    };
-    
-    return true;
-}
-
-function startVoiceRecognition() {
-    if (!recognition && !initVoiceRecognition()) {
-        showToast('Voice not supported in this browser');
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('Image must be under 5MB');
         return;
     }
     
-    try {
-        recognition.start();
-        isListening = true;
-        const voiceBtn = document.getElementById('voiceBtn');
-        if (voiceBtn) voiceBtn.classList.add('listening');
-        showToast('Listening...');
-    } catch (e) {
-        console.error('Voice start error:', e);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        currentPostImage = e.target.result;
+        showImagePreview(currentPostImage);
+        showToast('Image added');
+    };
+    reader.readAsDataURL(file);
+}
+
+function showImagePreview(src) {
+    const preview = document.getElementById('imagePreview');
+    if (preview) {
+        preview.innerHTML = `<img src="${src}" alt="Preview"><button type="button" class="remove-image" onclick="removeImage()">×</button>`;
+        preview.style.display = 'block';
     }
 }
 
-function stopVoiceRecognition() {
-    if (recognition) {
-        recognition.stop();
+function removeImage() {
+    currentPostImage = null;
+    const preview = document.getElementById('imagePreview');
+    if (preview) {
+        preview.innerHTML = '';
+        preview.style.display = 'none';
     }
-    isListening = false;
-    const voiceBtn = document.getElementById('voiceBtn');
-    if (voiceBtn) voiceBtn.classList.remove('listening');
-}
-
-function toggleVoice() {
-    // Check if running on file:// protocol
-    if (window.location.protocol === 'file:') {
-        showToast('Voice requires a local server (use Live Server)');
-        return;
-    }
-    
-    // Check browser support
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        showToast('Voice not supported - use Chrome or Edge');
-        return;
-    }
-    
-    if (isListening) {
-        stopVoiceRecognition();
-        showToast('Stopped listening');
-    } else {
-        startVoiceRecognition();
-    }
+    const input = document.getElementById('imageInput');
+    if (input) input.value = '';
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AUDIO RECORDING (Voice Clips)
+// VOICE RECORDING
 // ═══════════════════════════════════════════════════════════════
 let mediaRecorder = null;
 let audioChunks = [];
 let isRecording = false;
-let currentPostAudio = null;
 let recordingTimer = null;
 let recordingSeconds = 0;
 
@@ -1801,9 +710,7 @@ async function startAudioRecording() {
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
         
-        mediaRecorder.ondataavailable = (e) => {
-            audioChunks.push(e.data);
-        };
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
         
         mediaRecorder.onstop = () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
@@ -1813,8 +720,6 @@ async function startAudioRecording() {
                 showAudioPreview(currentPostAudio);
             };
             reader.readAsDataURL(audioBlob);
-            
-            // Stop all tracks
             stream.getTracks().forEach(track => track.stop());
         };
         
@@ -1822,27 +727,17 @@ async function startAudioRecording() {
         isRecording = true;
         recordingSeconds = 0;
         
-        const recordBtn = document.getElementById('recordBtn');
-        if (recordBtn) {
-            recordBtn.classList.add('recording');
-            recordBtn.title = 'Stop Recording';
-        }
+        const btn = document.getElementById('recordBtn');
+        if (btn) btn.classList.add('recording');
         
-        // Update timer every second
         recordingTimer = setInterval(() => {
             recordingSeconds++;
             showToast(`Recording... ${recordingSeconds}s`);
-            
-            // Max 60 seconds
-            if (recordingSeconds >= 60) {
-                stopAudioRecording();
-            }
+            if (recordingSeconds >= 60) stopAudioRecording();
         }, 1000);
         
         showToast('Recording started...');
-        
     } catch (err) {
-        console.error('Microphone access error:', err);
         showToast('Could not access microphone');
     }
 }
@@ -1851,14 +746,10 @@ function stopAudioRecording() {
     if (mediaRecorder && isRecording) {
         mediaRecorder.stop();
         isRecording = false;
-        
         clearInterval(recordingTimer);
         
-        const recordBtn = document.getElementById('recordBtn');
-        if (recordBtn) {
-            recordBtn.classList.remove('recording');
-            recordBtn.title = 'Record Voice Clip';
-        }
+        const btn = document.getElementById('recordBtn');
+        if (btn) btn.classList.remove('recording');
         
         showToast(`Voice clip saved (${recordingSeconds}s)`);
     }
@@ -1869,7 +760,7 @@ function showAudioPreview(src) {
     if (preview) {
         preview.innerHTML = `
             <div class="audio-preview-content">
-                <span class="audio-label">Voice Clip</span>
+                <span class="audio-label">🎤 Voice Clip</span>
                 <audio controls src="${src}"></audio>
                 <button type="button" class="remove-audio" onclick="removeAudio()">×</button>
             </div>
@@ -1888,416 +779,491 @@ function removeAudio() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// IMAGE UPLOAD
+// VOICE TO TEXT
 // ═══════════════════════════════════════════════════════════════
-let currentPostImage = null;
+let recognition = null;
+let isListening = false;
 
-function handleImageUpload(file) {
-    if (!file || !file.type.startsWith('image/')) {
-        showToast('Please select an image file');
+function toggleVoice() {
+    if (window.location.protocol === 'file:') {
+        showToast('Voice requires a server (use Live Server)');
         return;
     }
     
-    if (file.size > 5 * 1024 * 1024) {
-        showToast('Image must be under 5MB');
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        showToast('Voice not supported - use Chrome or Edge');
         return;
     }
     
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        currentPostImage = e.target.result;
-        showImagePreview(currentPostImage);
-        showToast('Image added');
+    if (isListening) {
+        stopVoiceRecognition();
+    } else {
+        startVoiceRecognition();
+    }
+}
+
+function startVoiceRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    
+    recognition.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+        }
+        
+        const thoughtInput = document.getElementById('thoughtInput');
+        if (thoughtInput && transcript) {
+            const cursorPos = thoughtInput.selectionStart;
+            const text = thoughtInput.value;
+            thoughtInput.value = text.substring(0, cursorPos) + transcript + text.substring(cursorPos);
+            thoughtInput.dispatchEvent(new Event('input'));
+        }
     };
-    reader.readAsDataURL(file);
-}
-
-function showImagePreview(src) {
-    const preview = document.getElementById('imagePreview');
-    if (preview) {
-        preview.innerHTML = `
-            <img src="${src}" alt="Preview">
-            <button type="button" class="remove-image" onclick="removeImage()">×</button>
-        `;
-        preview.style.display = 'block';
-    }
-}
-
-function removeImage() {
-    currentPostImage = null;
-    const preview = document.getElementById('imagePreview');
-    if (preview) {
-        preview.innerHTML = '';
-        preview.style.display = 'none';
-    }
-    const imageInput = document.getElementById('imageInput');
-    if (imageInput) imageInput.value = '';
-}
-
-// ═══════════════════════════════════════════════════════════════
-// POST SCHEDULING
-// ═══════════════════════════════════════════════════════════════
-const SCHEDULED_KEY = 'moodring_scheduled';
-
-function getScheduledPosts() {
-    try {
-        return JSON.parse(localStorage.getItem(SCHEDULED_KEY) || '[]');
-    } catch {
-        return [];
-    }
-}
-
-function saveScheduledPosts(posts) {
-    localStorage.setItem(SCHEDULED_KEY, JSON.stringify(posts));
-}
-
-function schedulePost(post, scheduleDate) {
-    const scheduled = getScheduledPosts();
-    scheduled.push({
-        ...post,
-        scheduledFor: scheduleDate,
-        id: 'scheduled_' + Date.now()
-    });
-    saveScheduledPosts(scheduled);
-    showToast(`Post scheduled for ${new Date(scheduleDate).toLocaleDateString()}`);
-}
-
-function checkScheduledPosts() {
-    const scheduled = getScheduledPosts();
-    const now = new Date();
-    const toPublish = [];
-    const remaining = [];
     
-    scheduled.forEach(post => {
-        if (new Date(post.scheduledFor) <= now) {
-            toPublish.push(post);
+    recognition.onerror = () => {
+        stopVoiceRecognition();
+        showToast('Voice recognition error');
+    };
+    
+    recognition.start();
+    isListening = true;
+    const btn = document.getElementById('voiceBtn');
+    if (btn) btn.classList.add('listening');
+    showToast('Listening...');
+}
+
+function stopVoiceRecognition() {
+    if (recognition) recognition.stop();
+    isListening = false;
+    const btn = document.getElementById('voiceBtn');
+    if (btn) btn.classList.remove('listening');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DRAFT AUTO-SAVE
+// ═══════════════════════════════════════════════════════════════
+function saveDraft() {
+    const thoughtInput = document.getElementById('thoughtInput');
+    if (!thoughtInput) return;
+    
+    const draft = {
+        text: thoughtInput.value,
+        mood: selectedMood,
+        image: currentPostImage,
+        savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(CONFIG.DRAFT_KEY, JSON.stringify(draft));
+    showToast('Draft saved');
+}
+
+function restoreDraft() {
+    const saved = localStorage.getItem(CONFIG.DRAFT_KEY);
+    if (!saved) return;
+    
+    try {
+        const draft = JSON.parse(saved);
+        const thoughtInput = document.getElementById('thoughtInput');
+        const charCount = document.getElementById('charCount');
+        
+        if (thoughtInput && draft.text) {
+            thoughtInput.value = draft.text;
+            if (charCount) charCount.textContent = draft.text.length;
+        }
+        
+        if (draft.mood) {
+            const moodBtn = document.querySelector(`.mood-option.${draft.mood}`);
+            if (moodBtn) {
+                document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+                moodBtn.classList.add('selected');
+                selectedMood = draft.mood;
+            }
+        }
+        
+        if (draft.image) {
+            currentPostImage = draft.image;
+            showImagePreview(draft.image);
+        }
+        
+        validateForm();
+        showToast('Draft restored');
+    } catch (e) {}
+}
+
+function clearDraft() {
+    localStorage.removeItem(CONFIG.DRAFT_KEY);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI WRITING PROMPTS
+// ═══════════════════════════════════════════════════════════════
+function fetchAIPrompt(mood) {
+    const promptText = document.getElementById('aiPromptText');
+    if (!promptText) return;
+    
+    const prompts = FALLBACK_PROMPTS[mood] || FALLBACK_PROMPTS.yellow;
+    promptText.textContent = prompts[Math.floor(Math.random() * prompts.length)];
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SHARE FUNCTIONS
+// ═══════════════════════════════════════════════════════════════
+function toggleShareMenu(postId) {
+    document.querySelectorAll('.share-menu').forEach(menu => {
+        if (menu.id !== `share-menu-${postId}`) menu.classList.remove('visible');
+    });
+    const menu = document.getElementById(`share-menu-${postId}`);
+    if (menu) menu.classList.toggle('visible');
+}
+
+function shareToTwitter(text) {
+    const truncated = text.length > 250 ? text.substring(0, 247) + '...' : text;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(truncated + '\n\n— from MoodRing')}`, '_blank');
+}
+
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════════════════════
+function handleSearch(query) {
+    searchQuery = query.toLowerCase().trim();
+    document.getElementById('searchClear').style.display = query ? 'block' : 'none';
+    renderPosts();
+}
+
+function clearSearch() {
+    const input = document.getElementById('searchInput');
+    const clear = document.getElementById('searchClear');
+    if (input) input.value = '';
+    if (clear) clear.style.display = 'none';
+    searchQuery = '';
+    renderPosts();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════════════════════════════
+function initTheme() {
+    const saved = localStorage.getItem(CONFIG.THEME_KEY);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const newTheme = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem(CONFIG.THEME_KEY, newTheme);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUOTES
+// ═══════════════════════════════════════════════════════════════
+function fetchQuote() {
+    const quote = FALLBACK_QUOTES[Math.floor(Math.random() * FALLBACK_QUOTES.length)];
+    const quoteText = document.getElementById('quoteText');
+    const quoteAuthor = document.getElementById('quoteAuthor');
+    
+    if (quoteText) quoteText.textContent = `"${quote.text}"`;
+    if (quoteAuthor) quoteAuthor.textContent = `— ${quote.author}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WEATHER
+// ═══════════════════════════════════════════════════════════════
+const weatherMoodMap = {
+    'Rain': { mood: 'blue', suggestion: "Rainy day... perfect for melancholic thoughts?" },
+    'Drizzle': { mood: 'blue', suggestion: "Light drizzle outside... feeling reflective?" },
+    'Thunderstorm': { mood: 'red', suggestion: "Storm brewing... channel that energy!" },
+    'Snow': { mood: 'blue', suggestion: "Snow falling... a quiet, contemplative mood?" },
+    'Clear': { mood: 'yellow', suggestion: "Clear skies... feeling bright today?" },
+    'Clouds': { mood: 'blue', suggestion: "Cloudy day... time for deep thoughts?" },
+};
+
+async function fetchWeather() {
+    const widget = document.getElementById('weatherWidget');
+    if (!API_CONFIG.OPENWEATHER_KEY || !widget) return;
+    
+    try {
+        const res = await fetch(
+            `https://api.openweathermap.org/data/2.5/weather?q=${API_CONFIG.WEATHER_CITY}&appid=${API_CONFIG.OPENWEATHER_KEY}&units=imperial`
+        );
+        if (!res.ok) return;
+        
+        const data = await res.json();
+        const weather = data.weather[0].main;
+        const temp = Math.round(data.main.temp);
+        
+        document.getElementById('weatherTemp').textContent = `${temp}°F`;
+        document.getElementById('weatherDesc').textContent = data.weather[0].description;
+        
+        const moodSuggestion = weatherMoodMap[weather] || { suggestion: "How are you feeling?" };
+        document.querySelector('.suggestion-text').textContent = moodSuggestion.suggestion;
+        
+        widget.style.display = 'flex';
+    } catch (e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EVENT HANDLERS
+// ═══════════════════════════════════════════════════════════════
+async function handleDelete(postId) {
+    // Only admin can delete
+    if (!IS_ADMIN) {
+        showToast('Only Aashish can delete posts');
+        return;
+    }
+    
+    if (!confirm('Delete this post?')) return;
+    
+    await deletePost(postId);
+    const postEl = document.querySelector(`[data-id="${postId}"]`);
+    if (postEl) postEl.remove();
+    showToast('Post deleted');
+    await updateCounts();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EVENT LISTENERS SETUP
+// ═══════════════════════════════════════════════════════════════
+function setupEventListeners() {
+    // Theme toggle
+    document.getElementById('themeToggle')?.addEventListener('click', toggleTheme);
+    
+    // Write button
+    document.getElementById('writeTrigger')?.addEventListener('click', () => openModal());
+    
+    // Modal
+    document.getElementById('modalClose')?.addEventListener('click', closeModal);
+    document.getElementById('modalOverlay')?.addEventListener('click', (e) => {
+        if (e.target.id === 'modalOverlay') closeModal();
+    });
+    
+    // Login
+    document.getElementById('loginBtn')?.addEventListener('click', () => {
+        if (IS_ADMIN) {
+            logout();
         } else {
-            remaining.push(post);
+            showLoginModal();
         }
     });
     
-    if (toPublish.length > 0) {
-        toPublish.forEach(post => {
-            const newPost = {
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                text: post.text,
-                mood: post.mood,
-                date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                image: post.image || null
-            };
-            const userPosts = getUserPosts();
-            userPosts.unshift(newPost);
-            saveUserPosts(userPosts);
+    document.getElementById('loginModalClose')?.addEventListener('click', hideLoginModal);
+    document.getElementById('loginModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'loginModal') hideLoginModal();
+    });
+    
+    document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const errorEl = document.getElementById('loginError');
+        
+        try {
+            await login(email, password);
+            hideLoginModal();
+            showToast('Welcome back!');
+            await renderPosts();
+        } catch (err) {
+            if (errorEl) {
+                errorEl.textContent = err.message;
+                errorEl.style.display = 'block';
+            }
+        }
+    });
+    
+    // Filters
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentFilter = btn.dataset.filter;
+            
+            const titles = { all: 'All Posts', blue: 'Melancholy Posts', yellow: 'Vibrant Posts', red: 'Fiery Posts' };
+            document.getElementById('sectionTitle').textContent = titles[currentFilter];
+            
+            renderPosts();
+        });
+    });
+    
+    // Mood selection
+    document.querySelectorAll('.mood-option').forEach(opt => {
+        opt.addEventListener('click', () => {
+            document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
+            opt.classList.add('selected');
+            selectedMood = opt.dataset.mood;
+            validateForm();
+            fetchAIPrompt(selectedMood);
+        });
+    });
+    
+    // Post form
+    const thoughtInput = document.getElementById('thoughtInput');
+    const charCount = document.getElementById('charCount');
+    const readingTimePreview = document.getElementById('readingTimePreview');
+    
+    thoughtInput?.addEventListener('input', () => {
+        if (charCount) charCount.textContent = thoughtInput.value.length;
+        if (readingTimePreview) readingTimePreview.textContent = calculateReadingTime(thoughtInput.value);
+        validateForm();
+    });
+    
+    document.getElementById('postForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!selectedMood || !thoughtInput?.value.trim()) return;
+        
+        try {
+            await createPost(thoughtInput.value, selectedMood, currentPostImage, currentPostAudio);
+            closeModal();
+            clearDraft();
+            showToast('Post published!');
+            await renderPosts();
+            await updateCounts();
+        } catch (err) {
+            showToast('Failed to publish');
+        }
+    });
+    
+    // Search
+    const searchInput = document.getElementById('searchInput');
+    let searchTimeout;
+    searchInput?.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => handleSearch(e.target.value), 300);
+    });
+    document.getElementById('searchClear')?.addEventListener('click', clearSearch);
+    
+    // Quote refresh
+    document.getElementById('quoteRefresh')?.addEventListener('click', fetchQuote);
+    
+    // AI prompt refresh
+    document.getElementById('aiRefresh')?.addEventListener('click', () => {
+        if (selectedMood) fetchAIPrompt(selectedMood);
+    });
+    
+    // Reactions
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.reaction-btn');
+        if (!btn) return;
+        
+        const postId = btn.dataset.postId;
+        const reactionType = btn.dataset.reaction;
+        if (!postId || !reactionType) return;
+        
+        btn.disabled = true;
+        const added = await toggleReaction(postId, reactionType);
+        btn.classList.toggle('active', added);
+        
+        const reactions = await getReactions(postId);
+        Object.entries(reactions).forEach(([emoji, count]) => {
+            const el = document.getElementById(`reaction-${postId}-${emoji}`);
+            if (el) el.textContent = count > 0 ? count : '';
         });
         
-        saveScheduledPosts(remaining);
-        renderPosts();
-        updateCounts();
-        showToast(`${toPublish.length} scheduled post(s) published!`);
-    }
-}
-
-// Check scheduled posts every minute
-setInterval(checkScheduledPosts, 60000);
-
-// ═══════════════════════════════════════════════════════════════
-// RANDOM POST
-// ═══════════════════════════════════════════════════════════════
-const randomPostBtn = document.getElementById('randomPostBtn');
-const randomPostOverlay = document.getElementById('randomPostOverlay');
-const randomPostClose = document.getElementById('randomPostClose');
-const randomPostContent = document.getElementById('randomPostContent');
-const shuffleBtn = document.getElementById('shuffleBtn');
-
-async function showRandomPost() {
-    const allPosts = await getAllPosts();
-    if (allPosts.length === 0) {
-        showToast('No posts yet!');
-        return;
-    }
+        btn.disabled = false;
+    });
     
-    const randomIndex = Math.floor(Math.random() * allPosts.length);
-    const post = allPosts[randomIndex];
-    
-    randomPostContent.innerHTML = `
-        <div class="random-post-card ${post.mood}">
-            <span class="post-mood ${post.mood}">${moodLabels[post.mood]}</span>
-            <span class="post-date">${post.date}</span>
-            <div class="post-content">${parseMarkdown(post.text)}</div>
-            ${post.image ? `<img src="${post.image}" alt="Post image" class="random-post-image">` : ''}
-            ${post.audio ? `<audio controls src="${post.audio}" class="random-post-audio"></audio>` : ''}
-        </div>
-    `;
-    
-    randomPostOverlay.classList.add('visible');
-}
-
-if (randomPostBtn) randomPostBtn.addEventListener('click', showRandomPost);
-if (shuffleBtn) shuffleBtn.addEventListener('click', showRandomPost);
-if (randomPostClose) randomPostClose.addEventListener('click', () => randomPostOverlay.classList.remove('visible'));
-if (randomPostOverlay) randomPostOverlay.addEventListener('click', (e) => {
-    if (e.target === randomPostOverlay) randomPostOverlay.classList.remove('visible');
-});
-
-// ═══════════════════════════════════════════════════════════════
-// MOOD STATISTICS
-// ═══════════════════════════════════════════════════════════════
-const statsBtn = document.getElementById('statsBtn');
-const statsModalOverlay = document.getElementById('statsModalOverlay');
-const statsModalClose = document.getElementById('statsModalClose');
-
-async function showMoodStats() {
-    const allPosts = await getAllPosts();
-    const userPosts = allPosts.filter(p => !p.isSample);
-    
-    const blue = userPosts.filter(p => p.mood === 'blue').length;
-    const yellow = userPosts.filter(p => p.mood === 'yellow').length;
-    const red = userPosts.filter(p => p.mood === 'red').length;
-    const total = userPosts.length;
-    const max = Math.max(blue, yellow, red, 1);
-    
-    // Update chart
-    document.getElementById('statsBlue').textContent = blue;
-    document.getElementById('statsYellow').textContent = yellow;
-    document.getElementById('statsRed').textContent = red;
-    
-    document.querySelector('#chartBlue .chart-fill').style.width = `${(blue / max) * 100}%`;
-    document.querySelector('#chartYellow .chart-fill').style.width = `${(yellow / max) * 100}%`;
-    document.querySelector('#chartRed .chart-fill').style.width = `${(red / max) * 100}%`;
-    
-    // Update summary
-    document.getElementById('statTotal').textContent = total;
-    
-    let dominant = '-';
-    if (blue > yellow && blue > red) dominant = 'Melancholy';
-    else if (yellow > blue && yellow > red) dominant = 'Vibrant';
-    else if (red > blue && red > yellow) dominant = 'Fiery';
-    else if (total > 0) dominant = 'Balanced';
-    document.getElementById('statDominant').textContent = dominant;
-    
-    const streak = getStreakData();
-    document.getElementById('statStreak').textContent = streak.count;
-    
-    statsModalOverlay.classList.add('visible');
-}
-
-if (statsBtn) statsBtn.addEventListener('click', showMoodStats);
-if (statsModalClose) statsModalClose.addEventListener('click', () => statsModalOverlay.classList.remove('visible'));
-if (statsModalOverlay) statsModalOverlay.addEventListener('click', (e) => {
-    if (e.target === statsModalOverlay) statsModalOverlay.classList.remove('visible');
-});
-
-// ═══════════════════════════════════════════════════════════════
-// MINI GAME - MOOD CATCHER (Easter Egg)
-// ═══════════════════════════════════════════════════════════════
-const gameOverlay = document.getElementById('gameOverlay');
-const gameArea = document.getElementById('gameArea');
-const gamePaddle = document.getElementById('gamePaddle');
-const gameScoreEl = document.getElementById('gameScore');
-const gameClose = document.getElementById('gameClose');
-
-let gameActive = false;
-let gameScore = 0;
-let paddleX = 50;
-let gameInterval = null;
-let spawnInterval = null;
-
-// Konami Code Easter Egg: ↑↑↓↓←→←→BA
-const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
-let konamiIndex = 0;
-
-document.addEventListener('keydown', (e) => {
-    // Check Konami code
-    if (e.key === konamiCode[konamiIndex]) {
-        konamiIndex++;
-        if (konamiIndex === konamiCode.length) {
-            konamiIndex = 0;
-            startGame();
+    // Close share menus on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.share-btn') && !e.target.closest('.share-menu')) {
+            document.querySelectorAll('.share-menu').forEach(m => m.classList.remove('visible'));
         }
-    } else {
-        konamiIndex = 0;
-    }
+    });
     
-    // Game controls
-    if (gameActive) {
-        if (e.key === 'ArrowLeft') {
-            paddleX = Math.max(0, paddleX - 10);
-            gamePaddle.style.left = paddleX + '%';
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        
+        if (e.key === 'n' && IS_ADMIN) openModal();
+        if (e.key === 't') toggleTheme();
+        if (e.key === 'Escape') {
+            closeModal();
+            hideLoginModal();
         }
-        if (e.key === 'ArrowRight') {
-            paddleX = Math.min(85, paddleX + 10);
-            gamePaddle.style.left = paddleX + '%';
-        }
-    }
-});
-
-// Touch controls for mobile
-if (gameArea) {
-    gameArea.addEventListener('touchmove', (e) => {
-        if (!gameActive) return;
-        const touch = e.touches[0];
-        const rect = gameArea.getBoundingClientRect();
-        paddleX = ((touch.clientX - rect.left) / rect.width) * 100 - 7.5;
-        paddleX = Math.max(0, Math.min(85, paddleX));
-        gamePaddle.style.left = paddleX + '%';
+    });
+    
+    // Draft buttons
+    document.querySelector('.draft-btn')?.addEventListener('click', saveDraft);
+    document.querySelector('.restore-btn')?.addEventListener('click', restoreDraft);
+    
+    // Toolbar formatting
+    document.querySelectorAll('.toolbar-btn[data-format]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const format = btn.dataset.format;
+            insertFormat(format);
+        });
     });
 }
 
-function startGame() {
-    gameOverlay.classList.add('visible');
-    gameActive = true;
-    gameScore = 0;
-    gameScoreEl.textContent = '0';
-    paddleX = 50;
-    gamePaddle.style.left = '50%';
+function insertFormat(format) {
+    const textarea = document.getElementById('thoughtInput');
+    if (!textarea) return;
     
-    // Clear existing moods
-    document.querySelectorAll('.falling-mood').forEach(el => el.remove());
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selected = text.substring(start, end);
     
-    // Spawn falling moods
-    spawnInterval = setInterval(spawnMood, 1000);
+    const formats = {
+        bold: { before: '**', after: '**', placeholder: 'bold text' },
+        italic: { before: '*', after: '*', placeholder: 'italic text' },
+        underline: { before: '<u>', after: '</u>', placeholder: 'underlined' },
+        bullet: { before: '\n- ', after: '', placeholder: 'list item' },
+        number: { before: '\n1. ', after: '', placeholder: 'list item' },
+        quote: { before: '\n> ', after: '', placeholder: 'quote' },
+    };
     
-    // Game loop
-    gameInterval = setInterval(updateGame, 50);
+    const f = formats[format];
+    if (!f) return;
     
-    showToast('Catch the moods!');
+    const insertion = selected || f.placeholder;
+    textarea.value = text.substring(0, start) + f.before + insertion + f.after + text.substring(end);
+    textarea.focus();
+    textarea.dispatchEvent(new Event('input'));
 }
 
-function spawnMood() {
-    if (!gameActive) return;
-    
-    const moods = ['blue', 'yellow', 'red'];
-    const mood = moods[Math.floor(Math.random() * moods.length)];
-    const moodEl = document.createElement('div');
-    moodEl.className = `falling-mood ${mood}`;
-    moodEl.style.left = Math.random() * 90 + '%';
-    moodEl.style.top = '0';
-    moodEl.dataset.mood = mood;
-    gameArea.appendChild(moodEl);
-}
-
-function updateGame() {
-    if (!gameActive) return;
-    
-    const moods = document.querySelectorAll('.falling-mood');
-    const paddleRect = gamePaddle.getBoundingClientRect();
-    const areaRect = gameArea.getBoundingClientRect();
-    
-    moods.forEach(moodEl => {
-        const top = parseFloat(moodEl.style.top) || 0;
-        moodEl.style.top = (top + 2) + '%';
-        
-        // Check collision with paddle
-        const moodRect = moodEl.getBoundingClientRect();
-        if (moodRect.bottom >= paddleRect.top && 
-            moodRect.left < paddleRect.right && 
-            moodRect.right > paddleRect.left &&
-            moodRect.top < paddleRect.bottom) {
-            // Caught!
-            gameScore += 10;
-            gameScoreEl.textContent = gameScore;
-            moodEl.remove();
-        }
-        
-        // Missed
-        if (top > 100) {
-            moodEl.remove();
-        }
-    });
-}
-
-function endGame() {
-    gameActive = false;
-    clearInterval(gameInterval);
-    clearInterval(spawnInterval);
-    gameOverlay.classList.remove('visible');
-    showToast(`Game Over! Score: ${gameScore}`);
-}
-
-if (gameClose) gameClose.addEventListener('click', endGame);
+// Make functions globally available
+window.openModal = openModal;
+window.handleDelete = handleDelete;
+window.toggleShareMenu = toggleShareMenu;
+window.shareToTwitter = shareToTwitter;
+window.copyToClipboard = copyToClipboard;
+window.removeImage = removeImage;
+window.removeAudio = removeAudio;
+window.handleImageUpload = handleImageUpload;
+window.toggleVoice = toggleVoice;
+window.toggleAudioRecording = toggleAudioRecording;
+window.saveDraft = saveDraft;
+window.restoreDraft = restoreDraft;
 
 // ═══════════════════════════════════════════════════════════════
-// KEYBOARD SHORTCUTS - Add R for random
-// ═══════════════════════════════════════════════════════════════
-document.addEventListener('keydown', (e) => {
-    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (gameActive) return;
-    
-    // R - Random post
-    if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        showRandomPost();
-    }
-});
-
-// ═══════════════════════════════════════════════════════════════
-// INITIALIZE
+// INIT
 // ═══════════════════════════════════════════════════════════════
 async function init() {
     initTheme();
-    
-    // Initialize Supabase FIRST (for both admin and visitors)
     initSupabase();
     
-    // Small delay to ensure Supabase is ready
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Check if user is authenticated
     await checkAuth();
     
-    // Fetch public posts as fallback if Supabase fails
-    if (!IS_ADMIN) {
-        await fetchPublicPosts();
-    }
+    setupEventListeners();
     
-    initSpotify();
-    
-    // Only show admin features for admin (logged in or URL param)
     if (IS_ADMIN) {
         displayStreak();
-        updateLoginUI(true);
-        console.log('🔓 Admin mode active');
-    } else {
-        // Hide admin-only elements after DOM is ready
-        setTimeout(hideAdminElements, 100);
-        console.log('👁️ Visitor mode - read only');
     }
     
-    // Fetch APIs
-    fetchWeather();
     fetchQuote();
-    
-    // Initial background
-    if (API_CONFIG.UNSPLASH_KEY) {
-        fetchBackground('all');
-    }
-    
-    // Check scheduled posts on load (admin only)
-    if (IS_ADMIN) {
-        checkScheduledPosts();
-    }
-    
-    // Track visitor and show count
+    fetchWeather();
     trackVisitor();
     fetchVisitorCount();
     
-    // Render posts
     await renderPosts();
     await updateCounts();
 }
 
-// Register Service Worker for PWA
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('SW registered:', registration.scope);
-            })
-            .catch(error => {
-                console.log('SW registration failed:', error);
-            });
-    });
-}
-
-// Start the app
-init();
+document.addEventListener('DOMContentLoaded', init);
