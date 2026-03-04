@@ -2103,219 +2103,321 @@ body {
    RESPONSIVE - MOBILE
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
+    /* Compact App-like Layout */
     .site-container {
-        padding: 0 1rem;
+        padding: 0 0.75rem;
     }
     
     .site-header {
-        padding: 1.5rem 0 1.25rem;
-        margin-bottom: 1.25rem;
+        padding: 0.5rem 0;
+        margin-bottom: 0;
     }
     
     .header-content {
-        flex-direction: column;
-        gap: 1rem;
+        flex-direction: row;
+        gap: 0.5rem;
+        align-items: center;
     }
     
     .site-title {
-        font-size: 1.5rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+    
+    .site-subtitle {
+        display: none;
     }
 
     .header-actions {
-        width: 100%;
-        justify-content: space-between;
+        gap: 0.25rem;
+        margin-left: auto;
     }
 
-    .sync-status .sync-text {
+    .sync-status {
         display: none;
     }
     
     .icon-btn,
     .theme-toggle {
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+    }
+    
+    .icon-btn svg,
+    .theme-toggle svg {
+        width: 18px;
+        height: 18px;
     }
 
     .write-btn {
-        flex: 1;
-        justify-content: center;
-        padding: 0.8rem 1.5rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        gap: 0.3rem;
     }
     
+    .write-btn span {
+        display: none;
+    }
+    
+    .write-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .login-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    /* Hide quote widget on mobile for cleaner look */
     .quote-widget {
-        padding: 1.35rem 1.5rem;
-    }
-    
-    .quote-widget::before {
-        font-size: 5rem;
-        top: -5px;
-        left: 10px;
-    }
-    
-    .quote-text {
-        font-size: 1.05rem;
+        display: none;
     }
 
     .weather-widget {
-        flex-wrap: wrap;
-        padding: 1rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        margin-bottom: 0.5rem;
     }
     
     .weather-suggestion {
-        margin-left: 0;
-        margin-top: 0.5rem;
-        width: 100%;
-        justify-content: flex-end;
+        display: none;
     }
 
+    /* Compact about section */
     .about-section {
-        padding: 0.75rem 0 1.25rem;
+        padding: 0.5rem 0;
+        margin-bottom: 0.5rem;
     }
     
     .about-content {
         flex-direction: row;
         text-align: left;
-        gap: 1rem;
-        align-items: flex-start;
+        gap: 0.75rem;
+        align-items: center;
     }
     
     .avatar {
-        width: 60px;
-        height: 60px;
+        width: 40px;
+        height: 40px;
         flex-shrink: 0;
     }
     
     .about-text p {
-        font-size: 0.95rem;
-        margin-bottom: 1rem;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+        line-height: 1.4;
     }
 
     .social-links {
-        justify-content: flex-start;
-        gap: 0.4rem;
-    }
-    
-    .social-link {
-        padding: 0.4rem 0.7rem;
-        font-size: 0.75rem;
+        display: none;
     }
 
     .journey-path {
-        gap: 0.4rem;
-    }
-    
-    .journey-stop {
-        font-size: 0.78rem;
+        display: none;
     }
     
     .streak-banner {
-        flex-wrap: wrap;
-        justify-content: center;
-        text-align: center;
-        padding: 0.9rem 1rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        margin-bottom: 0.5rem;
     }
-
+    
     .streak-subtext {
-        width: 100%;
-        margin-left: 0;
-        margin-top: 0.25rem;
+        display: none;
+    }
+    
+    /* Compact search */
+    .search-container {
+        margin-bottom: 0.5rem;
     }
     
     .search-input {
-        padding: 0.9rem 2.75rem;
+        padding: 0.6rem 2.25rem;
+        font-size: 0.9rem;
     }
 
+    /* Compact filters */
     .nav-filters {
         overflow-x: auto;
         flex-wrap: nowrap;
-        margin: 0 -1rem 1.5rem;
-        padding: 0.3rem;
-        border-radius: var(--radius-md);
+        margin: 0 -0.75rem 0.5rem;
+        padding: 0.25rem 0.75rem;
+        gap: 0.25rem;
         -webkit-overflow-scrolling: touch;
     }
 
     .filter-btn {
         flex-shrink: 0;
-        padding: 0.65rem 0.95rem;
-        font-size: 0.8rem;
+        padding: 0.4rem 0.65rem;
+        font-size: 0.75rem;
+        border-radius: 999px;
     }
     
+    .filter-count {
+        font-size: 0.65rem;
+        padding: 0.1rem 0.35rem;
+    }
+    
+    /* Compact post cards */
     .post-card {
-        padding: 1rem 0;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-light);
+    }
+    
+    .post-card:last-child {
+        border-bottom: none;
     }
 
     .post-meta {
-        gap: 0.5rem;
+        gap: 0.35rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .post-mood {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.7rem;
+    }
+    
+    .post-date,
+    .post-reading-time {
+        font-size: 0.7rem;
     }
 
     .post-actions {
-        width: 100%;
-        justify-content: flex-end;
-        margin-top: 0.75rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid var(--border-light);
+        margin-top: 0.5rem;
+        padding-top: 0;
+        border-top: none;
     }
 
     .delete-btn,
     .share-btn {
-        opacity: 0.6;
-        padding: 0.45rem;
+        opacity: 0.7;
+        padding: 0.35rem;
     }
     
+    .delete-btn svg,
+    .share-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+    
+    /* Compact post content */
     .post-content {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
+        line-height: 1.5;
     }
     
+    .post-content p {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Compact footer/reactions */
+    .post-footer {
+        padding-top: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .like-btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .like-icon {
+        font-size: 1rem;
+    }
+    
+    .reactions-summary {
+        font-size: 0.75rem;
+    }
+    
+    /* Compact gallery */
+    .post-gallery {
+        margin: 0.5rem -0.75rem 0;
+        border-radius: 0;
+    }
+    
+    .post-gallery.gallery-1 .gallery-item {
+        aspect-ratio: 16/9;
+        max-height: 200px;
+    }
+    
+    /* Compact modal */
     .modal {
-        padding: 1.5rem;
-        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-        max-height: 95vh;
+        padding: 1rem;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        max-height: 90vh;
         margin-top: auto;
     }
     
     .modal-title {
-        font-size: 1.35rem;
+        font-size: 1.1rem;
+        margin-bottom: 0.75rem;
     }
 
     .mood-selector {
-        flex-direction: column;
-        gap: 0.6rem;
+        flex-direction: row;
+        gap: 0.35rem;
     }
     
     .mood-option {
-        padding: 0.95rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+        flex: 1;
+        text-align: center;
     }
     
     .thought-input {
-        min-height: 150px;
-        font-size: 1rem;
+        min-height: 100px;
+        font-size: 0.95rem;
+        padding: 0.75rem;
+    }
+    
+    .form-label {
+        font-size: 0.8rem;
+        margin-bottom: 0.35rem;
     }
     
     .form-actions {
-        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
     }
     
     .draft-btn,
     .restore-btn {
-        flex: 1;
-        padding: 0.65rem 0.75rem;
-        font-size: 0.8rem;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .submit-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
     }
     
     .form-actions .submit-btn {
-        width: 100%;
-        flex: none;
+        width: auto;
+        flex: 1;
     }
     
     .editor-toolbar {
-        flex-wrap: wrap;
-        gap: 0.15rem;
+        gap: 0.1rem;
+        padding: 0.35rem;
     }
     
+    .toolbar-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
+    }
+    
+    /* Toast */
     .toast {
-        bottom: 1.5rem;
-        left: 1rem;
-        right: 1rem;
+        bottom: 1rem;
+        left: 0.75rem;
+        right: 0.75rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
         transform: translateX(0) translateY(100px);
         text-align: center;
     }
@@ -2325,25 +2427,60 @@ body {
     }
     
     .empty-state {
-        padding: 2rem 1rem;
+        padding: 1.5rem 0.75rem;
+    }
+    
+    .empty-state p {
+        font-size: 0.9rem;
     }
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   RESPONSIVE - SMALL MOBILE
+   RESPONSIVE - SMALL MOBILE (iPhone SE, etc)
    ═══════════════════════════════════════════════════════════════ */
 @media (max-width: 380px) {
+    .site-container {
+        padding: 0 0.5rem;
+    }
+    
     .site-title {
-        font-size: 1.35rem;
+        font-size: 1rem;
+    }
+    
+    .header-actions {
+        gap: 0.15rem;
+    }
+    
+    .icon-btn,
+    .theme-toggle {
+        width: 32px;
+        height: 32px;
+    }
+    
+    .write-btn {
+        padding: 0.4rem 0.6rem;
     }
     
     .filter-btn {
-        padding: 0.55rem 0.8rem;
-        font-size: 0.75rem;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.7rem;
     }
     
-    .social-link {
-        padding: 0.4rem 0.65rem;
+    .post-content {
+        font-size: 0.9rem;
+    }
+    
+    .avatar {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .about-text p {
+        font-size: 0.8rem;
+    }
+    
+    .mood-option {
+        padding: 0.4rem 0.5rem;
         font-size: 0.75rem;
     }
 }
@@ -4159,20 +4296,20 @@ button {
 /* Safe area support for iPhone notch/Dynamic Island */
 @supports (padding: max(0px)) {
     .site-container {
-        padding-left: max(1rem, env(safe-area-inset-left));
-        padding-right: max(1rem, env(safe-area-inset-right));
+        padding-left: max(0.75rem, env(safe-area-inset-left));
+        padding-right: max(0.75rem, env(safe-area-inset-right));
     }
     
     .site-header {
-        padding-top: max(1rem, env(safe-area-inset-top));
+        padding-top: max(0.5rem, env(safe-area-inset-top));
     }
     
     .modal {
-        padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+        padding-bottom: max(1rem, env(safe-area-inset-bottom));
     }
     
     .toast {
-        bottom: max(1.5rem, calc(env(safe-area-inset-bottom) + 1rem));
+        bottom: max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem));
     }
     
     .share-menu {
@@ -4193,32 +4330,34 @@ body {
     overscroll-behavior-y: contain;
 }
 
-/* Touch-friendly tap targets (minimum 44px) */
+/* Touch-friendly tap targets (compact but usable) */
 @media (hover: none) and (pointer: coarse) {
     .icon-btn,
     .theme-toggle,
-    .filter-btn,
     .like-btn,
     .reaction-emoji,
     .share-btn,
     .delete-btn,
-    .toolbar-btn,
-    .social-link {
-        min-width: 44px;
-        min-height: 44px;
-    }
-    
-    .like-btn {
-        padding: 0.6rem 0.9rem;
-        font-size: 1rem;
+    .toolbar-btn {
+        min-width: 36px;
+        min-height: 36px;
     }
     
     .filter-btn {
-        padding: 0.75rem 1rem;
+        min-height: 32px;
+    }
+    
+    .like-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+    }
+    
+    .filter-btn {
+        padding: 0.4rem 0.65rem;
     }
     
     .toolbar-btn {
-        padding: 0.6rem;
+        padding: 0.4rem;
     }
     
     /* Better touch feedback */
@@ -4264,9 +4403,9 @@ body {
         left: 0;
         right: 0;
         top: auto;
-        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-        padding: 1rem;
-        padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        padding: 0.75rem;
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
         margin: 0;
         min-width: unset;
         box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
@@ -4280,35 +4419,34 @@ body {
     .share-menu::before {
         content: '';
         display: block;
-        width: 40px;
-        height: 4px;
+        width: 32px;
+        height: 3px;
         background: var(--border-color);
         border-radius: 2px;
-        margin: 0 auto 1rem;
+        margin: 0 auto 0.75rem;
     }
     
     .share-menu button {
-        padding: 1rem;
-        font-size: 1rem;
-        border-radius: var(--radius-md);
+        padding: 0.75rem;
+        font-size: 0.9rem;
+        border-radius: var(--radius-sm);
     }
     
     .share-menu button svg {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
     }
     
     /* Image gallery improvements for mobile */
     .post-gallery {
-        border-radius: var(--radius-md);
-        margin-left: -1rem;
-        margin-right: -1rem;
+        margin-left: -0.75rem;
+        margin-right: -0.75rem;
         border-radius: 0;
     }
     
     .post-gallery.gallery-1 .gallery-item {
-        aspect-ratio: 4/3;
-        max-height: 300px;
+        aspect-ratio: 16/9;
+        max-height: 180px;
     }
     
     /* Image viewer full screen on mobile */
@@ -4319,7 +4457,10 @@ body {
     }
     
     .image-viewer-close {
-        top: max(20px, env(safe-area-inset-top));
+        top: max(12px, env(safe-area-inset-top));
+        width: 36px;
+        height: 36px;
+        font-size: 1.25rem;
         background: rgba(0, 0, 0, 0.5);
     }
     
@@ -4329,8 +4470,8 @@ body {
     }
     
     .modal {
-        max-height: 92vh;
-        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        max-height: 85vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     }
     
     /* Sticky header effect */
