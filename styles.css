@@ -916,20 +916,22 @@ body {
     box-shadow: var(--shadow-lg);
     z-index: 50;
     display: none;
-    min-width: 170px;
+    min-width: 180px;
 }
 
 .share-menu.visible {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
     animation: fadeInUp 0.2s ease;
 }
 
-.share-menu-item {
+.share-menu button {
     display: flex;
     align-items: center;
     gap: 0.65rem;
     width: 100%;
-    padding: 0.65rem 0.85rem;
+    padding: 0.6rem 0.75rem;
     background: none;
     border: none;
     border-radius: var(--radius-sm);
@@ -938,16 +940,41 @@ body {
     font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.15s ease;
+    text-align: left;
 }
 
-.share-menu-item:hover {
+.share-menu button:hover {
     background: var(--bg-secondary);
     color: var(--text-primary);
 }
 
-.share-menu-item svg {
+.share-menu button svg {
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
+}
+
+.share-menu button:nth-child(1):hover { color: #000; } /* X/Twitter */
+.share-menu button:nth-child(2):hover { color: #1877f2; } /* Facebook */
+.share-menu button:nth-child(3):hover { color: #0a66c2; } /* LinkedIn */
+.share-menu button:nth-child(4):hover { color: #25d366; } /* WhatsApp */
+.share-menu button:nth-child(5):hover { color: #0088cc; } /* Telegram */
+.share-menu button:nth-child(6):hover { color: var(--accent-red); } /* Email */
+
+[data-theme="dark"] .share-menu button:nth-child(1):hover { color: #fff; }
+
+.native-share-btn {
+    border-top: 1px solid var(--border-color) !important;
+    margin-top: 4px !important;
+    padding-top: 0.75rem !important;
+}
+
+@supports not (selector(:has(*))) {
+    .native-share-btn { display: none; }
+}
+
+@media (hover: hover) {
+    .native-share-btn { display: none; }
 }
 
 /* Post Content - Markdown */
