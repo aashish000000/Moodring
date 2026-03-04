@@ -433,15 +433,35 @@ async function renderPosts() {
     }
     
     postsList.innerHTML = posts.map(post => renderPostCard(post)).join('');
-    
+
     // Load reactions
     for (const post of posts) {
-        const reactions = await getReactions(post.id);
-        Object.entries(reactions).forEach(([emoji, count]) => {
-            const el = document.getElementById(`reaction-${post.id}-${emoji}`);
-            if (el) el.textContent = count > 0 ? count : '';
-        });
+        await updateReactionsSummary(post.id);
     }
+}
+
+async function updateReactionsSummary(postId) {
+    const reactions = await getReactions(postId);
+    const summaryEl = document.getElementById(`reactions-summary-${postId}`);
+    
+    if (!summaryEl) return;
+    
+    const totalCount = Object.values(reactions).reduce((a, b) => a + b, 0);
+    const activeReactions = Object.entries(reactions)
+        .filter(([_, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1]);
+    
+    if (totalCount === 0) {
+        summaryEl.innerHTML = '';
+        return;
+    }
+    
+    const topEmojis = activeReactions.slice(0, 3).map(([emoji]) => emoji).join('');
+    
+    summaryEl.innerHTML = `
+        <span class="reaction-emojis">${topEmojis}</span>
+        <span class="reaction-total">${totalCount}</span>
+    `;
 }
 
 function renderPostGallery(post) {
@@ -502,13 +522,22 @@ function renderPostCard(post) {
             ${post.audio ? `<div class="post-audio"><audio controls src="${post.audio}"></audio></div>` : ''}
             
             <div class="post-footer">
-                <div class="reactions-buttons">
-                    ${['❤️', '👍', '😂', '🔥', '💭'].map(emoji => `
-                        <button class="reaction-btn" data-post-id="${post.id}" data-reaction="${emoji}">
-                            <span>${emoji}</span>
-                            <span class="reaction-count" id="reaction-${post.id}-${emoji}"></span>
+                <div class="reactions-wrapper">
+                    <div class="reaction-trigger" data-post-id="${post.id}">
+                        <button class="like-btn" data-post-id="${post.id}">
+                            <span class="like-icon">🤍</span>
+                            <span class="like-text">React</span>
                         </button>
-                    `).join('')}
+                        <div class="reactions-popup" data-post-id="${post.id}">
+                            ${['❤️', '👍', '😂', '🔥', '💭'].map((emoji, i) => `
+                                <button class="reaction-emoji" data-post-id="${post.id}" data-reaction="${emoji}" style="--delay: ${i * 0.05}s">
+                                    <span class="emoji">${emoji}</span>
+                                    <span class="emoji-label">${['Love', 'Like', 'Haha', 'Fire', 'Think'][i]}</span>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="reactions-summary" id="reactions-summary-${post.id}"></div>
                 </div>
                 <div class="share-actions">
                     <button class="share-btn" onclick="toggleShareMenu('${post.id}')" title="Share">
@@ -1340,26 +1369,120 @@ function setupEventListeners() {
         if (selectedMood) fetchAIPrompt(selectedMood);
     });
     
-    // Reactions
+    // Reactions - popup emoji click
     document.addEventListener('click', async (e) => {
-        const btn = e.target.closest('.reaction-btn');
-        if (!btn) return;
+        const emojiBtn = e.target.closest('.reaction-emoji');
+        if (emojiBtn) {
+            const postId = emojiBtn.dataset.postId;
+            const reactionType = emojiBtn.dataset.reaction;
+            if (!postId || !reactionType) return;
+            
+            emojiBtn.disabled = true;
+            
+            // Add bounce animation
+            emojiBtn.classList.add('selected');
+            
+            const added = await toggleReaction(postId, reactionType);
+            
+            // Update the like button to show the reaction
+            const likeBtn = document.querySelector(`.like-btn[data-post-id="${postId}"]`);
+            if (likeBtn && added) {
+                const icon = likeBtn.querySelector('.like-icon');
+                const text = likeBtn.querySelector('.like-text');
+                if (icon) icon.textContent = reactionType;
+                if (text) text.textContent = ['Love', 'Like', 'Haha', 'Fire', 'Think'][['❤️', '👍', '😂', '🔥', '💭'].indexOf(reactionType)];
+                likeBtn.classList.add('reacted');
+            }
+            
+            // Update summary
+            await updateReactionsSummary(postId);
+            
+            // Hide popup
+            const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
+            if (popup) popup.classList.remove('visible');
+            
+            setTimeout(() => {
+                emojiBtn.classList.remove('selected');
+                emojiBtn.disabled = false;
+            }, 300);
+            
+            return;
+        }
         
-        const postId = btn.dataset.postId;
-        const reactionType = btn.dataset.reaction;
-        if (!postId || !reactionType) return;
-        
-        btn.disabled = true;
-        const added = await toggleReaction(postId, reactionType);
-        btn.classList.toggle('active', added);
-        
-        const reactions = await getReactions(postId);
-        Object.entries(reactions).forEach(([emoji, count]) => {
-            const el = document.getElementById(`reaction-${postId}-${emoji}`);
-            if (el) el.textContent = count > 0 ? count : '';
-        });
-        
-        btn.disabled = false;
+        // Like button click (quick like with heart)
+        const likeBtn = e.target.closest('.like-btn');
+        if (likeBtn) {
+            const postId = likeBtn.dataset.postId;
+            if (!postId) return;
+            
+            // Quick like with heart
+            const added = await toggleReaction(postId, '❤️');
+            
+            const icon = likeBtn.querySelector('.like-icon');
+            const text = likeBtn.querySelector('.like-text');
+            
+            if (added) {
+                if (icon) icon.textContent = '❤️';
+                if (text) text.textContent = 'Love';
+                likeBtn.classList.add('reacted');
+            } else {
+                if (icon) icon.textContent = '🤍';
+                if (text) text.textContent = 'React';
+                likeBtn.classList.remove('reacted');
+            }
+            
+            await updateReactionsSummary(postId);
+        }
+    });
+    
+    // Reactions popup hover (desktop)
+    document.addEventListener('mouseenter', (e) => {
+        const trigger = e.target.closest('.reaction-trigger');
+        if (trigger) {
+            const postId = trigger.dataset.postId;
+            const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
+            if (popup) {
+                popup.classList.add('visible');
+            }
+        }
+    }, true);
+    
+    document.addEventListener('mouseleave', (e) => {
+        const trigger = e.target.closest('.reaction-trigger');
+        if (trigger) {
+            const postId = trigger.dataset.postId;
+            setTimeout(() => {
+                const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
+                const isHovering = trigger.matches(':hover') || popup?.matches(':hover');
+                if (popup && !isHovering) {
+                    popup.classList.remove('visible');
+                }
+            }, 100);
+        }
+    }, true);
+    
+    // Long press for mobile
+    let longPressTimer;
+    document.addEventListener('touchstart', (e) => {
+        const likeBtn = e.target.closest('.like-btn');
+        if (likeBtn) {
+            const postId = likeBtn.dataset.postId;
+            longPressTimer = setTimeout(() => {
+                const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
+                if (popup) {
+                    popup.classList.add('visible');
+                    navigator.vibrate?.(10);
+                }
+            }, 500);
+        }
+    });
+    
+    document.addEventListener('touchend', () => {
+        clearTimeout(longPressTimer);
+    });
+    
+    document.addEventListener('touchmove', () => {
+        clearTimeout(longPressTimer);
     });
     
     // Close share menus on outside click
