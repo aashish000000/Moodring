@@ -76,10 +76,6 @@
                 "https://www.linkedin.com/in/aa-joshi/",
                 "https://www.instagram.com/__aashishthegreat/"
             ]
-        },
-        "publisher": {
-            "@type": "Person",
-            "name": "Aashish Joshi"
         }
     }
     </script>
@@ -101,9 +97,14 @@
                 </div>
                 <div class="header-actions">
                     <!-- Admin Badge -->
-                    <span class="admin-badge" id="adminBadge" style="display: none;">Admin</span>
+                    <span class="admin-badge" id="adminBadge" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                        Admin
+                    </span>
                     <!-- Sync Status -->
-                    <div class="sync-status" id="syncStatus" title="Cloud sync status">
+                    <div class="sync-status admin-only" id="syncStatus" title="Cloud sync status">
                         <svg class="sync-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
@@ -118,36 +119,31 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                         </svg>
                     </button>
-                    <!-- New Post Button -->
-                    <button class="write-btn" id="writeTrigger">
+                    <!-- New Post Button (Admin Only) -->
+                    <button class="write-btn admin-only" id="writeTrigger">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                        New Post
+                        <span>New Post</span>
                     </button>
-                    <!-- Login/Logout Button -->
-                    <button class="login-btn" id="loginBtn" title="Login">
+                    <!-- Login Button -->
+                    <button class="login-btn" id="loginBtn" title="Admin Login">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                         </svg>
-                        <span id="loginBtnText">Login</span>
+                        <span>Login</span>
                     </button>
                 </div>
             </div>
         </header>
 
-        <!-- Weather & Mood Suggestion -->
-        <div class="weather-widget" id="weatherWidget" style="display: none;">
-            <button class="icon-btn weather-icon-btn" id="weatherIconBtn" title="Weather">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                </svg>
-            </button>
+        <!-- Weather & Mood Suggestion (Admin Only) -->
+        <div class="weather-widget admin-only" id="weatherWidget" style="display: none;">
             <div class="weather-info">
                 <span class="weather-temp" id="weatherTemp">--°F</span>
                 <span class="weather-desc" id="weatherDesc">Loading...</span>
             </div>
-            <div class="weather-suggestion" id="weatherSuggestion">
+            <div class="weather-suggestion">
                 <span class="suggestion-text">Cloudy day... time for deep thoughts?</span>
             </div>
         </div>
@@ -163,22 +159,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
             </button>
-        </div>
-
-        <!-- Spotify Now Playing -->
-        <div class="spotify-widget" id="spotifyWidget" style="display: none;">
-            <div class="spotify-content">
-                <div class="spotify-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                    </svg>
-                </div>
-                <div class="spotify-info">
-                    <span class="spotify-label">Now Playing</span>
-                    <span class="spotify-track" id="spotifyTrack">Not connected</span>
-                    <span class="spotify-artist" id="spotifyArtist">Connect Spotify to show</span>
-                </div>
-            </div>
         </div>
 
         <!-- About Section -->
@@ -226,8 +206,8 @@
             <span class="journey-stop current">New Jersey 🇺🇸</span>
         </div>
 
-        <!-- Streak Banner -->
-        <div class="streak-banner" id="streakBanner" style="display: none;">
+        <!-- Streak Banner (Admin Only) -->
+        <div class="streak-banner admin-only" id="streakBanner" style="display: none;">
             <span class="streak-icon">🔥</span>
             <span class="streak-text" id="streakText">0 day streak</span>
             <span class="streak-subtext">Keep writing!</span>
@@ -238,7 +218,7 @@
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
-            <input type="text" class="search-input" id="searchInput" placeholder="Search your thoughts...">
+            <input type="text" class="search-input" id="searchInput" placeholder="Search posts...">
             <button class="search-clear" id="searchClear" style="display: none;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -303,7 +283,7 @@
             <!-- AI Writing Prompt -->
             <div class="ai-prompt-section" id="aiPromptSection">
                 <div class="ai-prompt-header">
-                    <span class="ai-label">✨ AI Writing Prompt</span>
+                    <span class="ai-label">✨ Writing Prompt</span>
                     <button class="ai-refresh" id="aiRefresh" title="Get new prompt">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -359,13 +339,9 @@
                         <span class="reading-time-preview" id="readingTimePreview">< 1 min read</span>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label">Schedule <span class="label-hint">(optional - leave empty to publish now)</span></label>
-                    <input type="datetime-local" id="scheduleDate" class="schedule-input">
-                </div>
                 <div class="form-actions">
-                    <button type="button" class="draft-btn" onclick="saveDraft()">Save Draft</button>
-                    <button type="button" class="restore-btn" onclick="restoreDraft()">Restore Draft</button>
+                    <button type="button" class="draft-btn">Save Draft</button>
+                    <button type="button" class="restore-btn">Restore Draft</button>
                     <button type="submit" class="submit-btn" id="submitBtn" disabled>Publish</button>
                 </div>
             </form>
@@ -377,96 +353,11 @@
         <span class="toast-message" id="toastMessage">Link copied!</span>
     </div>
 
-    <!-- Mood Stats Modal -->
-    <div class="modal-overlay" id="statsModalOverlay">
-        <div class="modal stats-modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Mood Statistics</h3>
-                <button class="modal-close" id="statsModalClose">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="stats-content">
-                <div class="stats-chart">
-                    <div class="chart-bar blue" id="chartBlue">
-                        <span class="chart-label">Melancholy</span>
-                        <div class="chart-fill"></div>
-                        <span class="chart-count" id="statsBlue">0</span>
-                    </div>
-                    <div class="chart-bar yellow" id="chartYellow">
-                        <span class="chart-label">Vibrant</span>
-                        <div class="chart-fill"></div>
-                        <span class="chart-count" id="statsYellow">0</span>
-                    </div>
-                    <div class="chart-bar red" id="chartRed">
-                        <span class="chart-label">Fiery</span>
-                        <div class="chart-fill"></div>
-                        <span class="chart-count" id="statsRed">0</span>
-                    </div>
-                </div>
-                <div class="stats-summary">
-                    <div class="stat-item">
-                        <span class="stat-value" id="statTotal">0</span>
-                        <span class="stat-label">Total Posts</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="statDominant">-</span>
-                        <span class="stat-label">Dominant Mood</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-value" id="statStreak">0</span>
-                        <span class="stat-label">Day Streak</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Random Post Modal -->
-    <div class="modal-overlay" id="randomPostOverlay">
-        <div class="modal random-post-modal">
-            <div class="modal-header">
-                <h3 class="modal-title">Random Memory</h3>
-                <button class="modal-close" id="randomPostClose">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <div class="random-post-content" id="randomPostContent">
-                <!-- Random post will be inserted here -->
-            </div>
-            <button class="shuffle-btn" id="shuffleBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Show Another
-            </button>
-        </div>
-    </div>
-
-    <!-- Mini Game (Easter Egg) -->
-    <div class="game-overlay" id="gameOverlay">
-        <div class="game-container">
-            <div class="game-header">
-                <h3>Mood Catcher</h3>
-                <span class="game-score">Score: <span id="gameScore">0</span></span>
-                <button class="game-close" id="gameClose">×</button>
-            </div>
-            <div class="game-area" id="gameArea">
-                <div class="game-paddle" id="gamePaddle"></div>
-            </div>
-            <p class="game-hint">Use ← → arrow keys or touch to move</p>
-        </div>
-    </div>
-
     <!-- Login Modal -->
     <div class="modal-overlay" id="loginModal">
         <div class="modal login-modal">
             <button class="modal-close" id="loginModalClose">×</button>
-            <h3 class="login-title">Welcome Back</h3>
+            <h3 class="login-title">Admin Login</h3>
             <p class="login-subtitle">Sign in to write posts</p>
             <form id="loginForm">
                 <div class="login-field">
@@ -485,8 +376,5 @@
 
     <!-- JavaScript -->
     <script src="script.js"></script>
-    
-    <!-- Analytics (Umami - uncomment and add your details) -->
-    <!-- <script async src="https://analytics.yourdomain.com/script.js" data-website-id="YOUR_WEBSITE_ID"></script> -->
 </body>
 </html>
