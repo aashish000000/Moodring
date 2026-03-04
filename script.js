@@ -464,6 +464,37 @@ async function updateReactionsSummary(postId) {
     `;
 }
 
+async function highlightCurrentReaction(postId) {
+    if (!supabaseClient) return;
+    
+    const sessionId = getSessionId();
+    const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
+    if (!popup) return;
+    
+    // Clear previous highlights
+    popup.querySelectorAll('.reaction-emoji').forEach(btn => {
+        btn.classList.remove('user-reacted');
+    });
+    
+    try {
+        // Check all reaction types
+        for (const emoji of ['❤️', '👍', '😂', '🔥', '💭']) {
+            const { data } = await supabaseClient
+                .from('reactions')
+                .select('id')
+                .eq('post_id', postId)
+                .eq('reaction_type', emoji)
+                .eq('session_id', sessionId)
+                .single();
+            
+            if (data) {
+                const btn = popup.querySelector(`.reaction-emoji[data-reaction="${emoji}"]`);
+                if (btn) btn.classList.add('user-reacted');
+            }
+        }
+    } catch (e) {}
+}
+
 function renderPostGallery(post) {
     const images = post.images || (post.image ? [post.image] : []);
     if (images.length === 0) return '';
@@ -1386,12 +1417,21 @@ function setupEventListeners() {
             
             // Update the like button to show the reaction
             const likeBtn = document.querySelector(`.like-btn[data-post-id="${postId}"]`);
-            if (likeBtn && added) {
-                const icon = likeBtn.querySelector('.like-icon');
-                const text = likeBtn.querySelector('.like-text');
+            const icon = likeBtn?.querySelector('.like-icon');
+            const text = likeBtn?.querySelector('.like-text');
+            
+            if (added) {
+                // Reaction added
                 if (icon) icon.textContent = reactionType;
                 if (text) text.textContent = ['Love', 'Like', 'Haha', 'Fire', 'Think'][['❤️', '👍', '😂', '🔥', '💭'].indexOf(reactionType)];
-                likeBtn.classList.add('reacted');
+                likeBtn?.classList.add('reacted');
+                showToast(`Reacted with ${reactionType}`);
+            } else {
+                // Reaction removed
+                if (icon) icon.textContent = '🤍';
+                if (text) text.textContent = 'React';
+                likeBtn?.classList.remove('reacted');
+                showToast('Reaction removed');
             }
             
             // Update summary
@@ -1425,10 +1465,12 @@ function setupEventListeners() {
                 if (icon) icon.textContent = '❤️';
                 if (text) text.textContent = 'Love';
                 likeBtn.classList.add('reacted');
+                showToast('❤️ Loved');
             } else {
                 if (icon) icon.textContent = '🤍';
                 if (text) text.textContent = 'React';
                 likeBtn.classList.remove('reacted');
+                showToast('Reaction removed');
             }
             
             await updateReactionsSummary(postId);
@@ -1436,12 +1478,13 @@ function setupEventListeners() {
     });
     
     // Reactions popup hover (desktop)
-    document.addEventListener('mouseenter', (e) => {
+    document.addEventListener('mouseenter', async (e) => {
         const trigger = e.target.closest('.reaction-trigger');
         if (trigger) {
             const postId = trigger.dataset.postId;
             const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
             if (popup) {
+                await highlightCurrentReaction(postId);
                 popup.classList.add('visible');
             }
         }
@@ -1467,9 +1510,11 @@ function setupEventListeners() {
         const likeBtn = e.target.closest('.like-btn');
         if (likeBtn) {
             const postId = likeBtn.dataset.postId;
-            longPressTimer = setTimeout(() => {
+            longPressTimer = setTimeout(async () => {
                 const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
                 if (popup) {
+                    // Highlight current reaction
+                    await highlightCurrentReaction(postId);
                     popup.classList.add('visible');
                     navigator.vibrate?.(10);
                 }
