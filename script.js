@@ -85,7 +85,7 @@ const samplePosts = [
 // ═══════════════════════════════════════════════════════════════
 // GLOBAL STATE
 // ═══════════════════════════════════════════════════════════════
-let supabase = null;
+let supabaseClient = null;
 let IS_ADMIN = false;
 let currentUser = null;
 let currentFilter = 'all';
@@ -103,7 +103,7 @@ const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
 function initSupabase() {
     if (API_CONFIG.SUPABASE_URL && API_CONFIG.SUPABASE_KEY && window.supabase) {
         try {
-            supabase = window.supabase.createClient(API_CONFIG.SUPABASE_URL, API_CONFIG.SUPABASE_KEY);
+            supabaseClient = window.supabase.createClient(API_CONFIG.SUPABASE_URL, API_CONFIG.SUPABASE_KEY);
             updateSyncStatus('synced');
             return true;
         } catch (e) {
@@ -134,9 +134,9 @@ function updateSyncStatus(status) {
 // AUTHENTICATION - Admin Only
 // ═══════════════════════════════════════════════════════════════
 async function checkAuth() {
-    if (!supabase) return null;
+    if (!supabaseClient) return null;
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await supabaseClient.auth.getUser();
         if (user) {
             currentUser = user;
             IS_ADMIN = true;
@@ -151,11 +151,13 @@ async function checkAuth() {
 }
 
 async function login(email, password) {
-    if (!supabase) throw new Error('Database not connected');
-    
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    console.log('Login function called, supabaseClient:', !!supabaseClient);
+    if (!supabaseClient) throw new Error('Database not connected. Please check Supabase configuration.');
+
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    console.log('Supabase auth response:', { data, error });
     if (error) throw error;
-    
+
     currentUser = data.user;
     IS_ADMIN = true;
     updateAdminUI(true);
@@ -163,8 +165,8 @@ async function login(email, password) {
 }
 
 async function logout() {
-    if (!supabase) return;
-    await supabase.auth.signOut();
+    if (!supabaseClient) return;
+    await supabaseClient.auth.signOut();
     currentUser = null;
     IS_ADMIN = false;
     updateAdminUI(false);
@@ -205,9 +207,9 @@ function saveLocalPosts(posts) {
 
 async function getAllPosts() {
     // Try Supabase first
-    if (supabase) {
+    if (supabaseClient) {
         try {
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('posts')
                 .select('*')
                 .order('timestamp', { ascending: false });
@@ -244,10 +246,10 @@ async function createPost(text, mood, image = null, audio = null) {
     saveLocalPosts(localPosts);
     
     // Sync to Supabase
-    if (supabase) {
+    if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            await supabase.from('posts').insert(newPost);
+            await supabaseClient.from('posts').insert(newPost);
             updateSyncStatus('synced');
         } catch (e) {
             console.log('Supabase sync failed:', e);
@@ -272,10 +274,10 @@ async function deletePost(postId) {
     saveLocalPosts(filtered);
     
     // Remove from Supabase
-    if (supabase) {
+    if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            await supabase.from('posts').delete().eq('id', postId);
+            await supabaseClient.from('posts').delete().eq('id', postId);
             updateSyncStatus('synced');
         } catch (e) {
             updateSyncStatus('local');
@@ -298,10 +300,10 @@ function getSessionId() {
 }
 
 async function getReactions(postId) {
-    if (!supabase) return {};
+    if (!supabaseClient) return {};
     
     try {
-        const { data } = await supabase
+        const { data } = await supabaseClient
             .from('reactions')
             .select('reaction_type')
             .eq('post_id', postId);
@@ -319,12 +321,12 @@ async function getReactions(postId) {
 }
 
 async function toggleReaction(postId, reactionType) {
-    if (!supabase) return null;
+    if (!supabaseClient) return null;
     
     const sessionId = getSessionId();
     
     try {
-        const { data: existing } = await supabase
+        const { data: existing } = await supabaseClient
             .from('reactions')
             .select('id')
             .eq('post_id', postId)
@@ -333,10 +335,10 @@ async function toggleReaction(postId, reactionType) {
             .single();
         
         if (existing) {
-            await supabase.from('reactions').delete().eq('id', existing.id);
+            await supabaseClient.from('reactions').delete().eq('id', existing.id);
             return false;
         } else {
-            await supabase.from('reactions').insert({
+            await supabaseClient.from('reactions').insert({
                 post_id: postId,
                 reaction_type: reactionType,
                 session_id: sessionId
@@ -352,18 +354,18 @@ async function toggleReaction(postId, reactionType) {
 // VISITOR COUNTER
 // ═══════════════════════════════════════════════════════════════
 async function trackVisitor() {
-    if (sessionStorage.getItem('visited') || !supabase) return;
+    if (sessionStorage.getItem('visited') || !supabaseClient) return;
     sessionStorage.setItem('visited', 'true');
     
     try {
-        const { data } = await supabase
+        const { data } = await supabaseClient
             .from('visitors')
             .select('count')
             .eq('id', 1)
             .single();
         
         if (data) {
-            await supabase
+            await supabaseClient
                 .from('visitors')
                 .update({ count: data.count + 1 })
                 .eq('id', 1);
@@ -374,10 +376,10 @@ async function trackVisitor() {
 }
 
 async function fetchVisitorCount() {
-    if (!supabase) return;
+    if (!supabaseClient) return;
     
     try {
-        const { data } = await supabase
+        const { data } = await supabaseClient
             .from('visitors')
             .select('count')
             .eq('id', 1)
@@ -637,8 +639,14 @@ function validateForm() {
 }
 
 function showLoginModal() {
+    console.log('Opening login modal...');
     const modal = document.getElementById('loginModal');
-    if (modal) modal.classList.add('visible');
+    if (modal) {
+        modal.classList.add('visible');
+        console.log('Login modal opened');
+    } else {
+        console.error('Login modal not found!');
+    }
 }
 
 function hideLoginModal() {
@@ -1061,16 +1069,21 @@ function setupEventListeners() {
     
     document.getElementById('loginForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        console.log('Login form submitted');
         const email = document.getElementById('loginEmail').value;
         const password = document.getElementById('loginPassword').value;
         const errorEl = document.getElementById('loginError');
         
+        console.log('Attempting login with email:', email);
+        
         try {
             await login(email, password);
+            console.log('Login successful!');
             hideLoginModal();
             showToast('Welcome back!');
             await renderPosts();
         } catch (err) {
+            console.error('Login failed:', err);
             if (errorEl) {
                 errorEl.textContent = err.message;
                 errorEl.style.display = 'block';
