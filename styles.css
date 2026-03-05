@@ -963,6 +963,23 @@ body {
 
 [data-theme="dark"] .share-menu button:nth-child(1):hover { color: #fff; }
 
+.share-image-btn {
+    background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045) !important;
+    color: white !important;
+    font-weight: 600 !important;
+    border-radius: var(--radius-sm) !important;
+    margin: 4px 0 !important;
+}
+
+.share-image-btn:hover {
+    opacity: 0.9 !important;
+    transform: scale(1.02);
+}
+
+.share-image-btn svg {
+    stroke: white !important;
+}
+
 .native-share-btn {
     border-top: 1px solid var(--border-color) !important;
     margin-top: 4px !important;

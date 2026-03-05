@@ -768,6 +768,10 @@ function renderPostCard(post) {
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                             Copy text
                         </button>
+                        <button onclick="shareAsImage('${post.id}')" class="share-image-btn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            Share as Image (Instagram)
+                        </button>
                         <button onclick="nativeShare(\`${escapeForAttr(post.text)}\`)" class="native-share-btn">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                             More options...
@@ -1365,6 +1369,143 @@ function shareToTwitter(text) {
     closeAllShareMenus();
 }
 
+async function shareAsImage(postId) {
+    closeAllShareMenus();
+    showToast('Creating image...');
+    
+    const postCard = document.querySelector(`.post-card[data-id="${postId}"]`);
+    if (!postCard) {
+        showToast('Post not found');
+        return;
+    }
+    
+    // Get post data
+    const textEl = postCard.querySelector('.post-content');
+    const moodEl = postCard.querySelector('.post-mood');
+    const dateEl = postCard.querySelector('.post-date');
+    
+    const text = textEl?.innerText || '';
+    const mood = postCard.classList.contains('blue') ? 'blue' : 
+                 postCard.classList.contains('yellow') ? 'yellow' : 'red';
+    const date = dateEl?.innerText || '';
+    
+    // Create canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Size for Instagram Story (1080x1920) or square (1080x1080)
+    const width = 1080;
+    const textLines = wrapText(ctx, text, width - 160, 42);
+    const height = Math.max(1080, Math.min(1920, 400 + textLines.length * 60));
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Background gradient based on mood
+    const gradients = {
+        blue: ['#1a1a2e', '#16213e', '#0f3460'],
+        yellow: ['#1a1a0a', '#2d2d0a', '#3d3d0a'],
+        red: ['#1a0a0a', '#2d0a0a', '#3d1a1a']
+    };
+    const colors = gradients[mood] || gradients.blue;
+    
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, colors[0]);
+    gradient.addColorStop(0.5, colors[1]);
+    gradient.addColorStop(1, colors[2]);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    
+    // Mood emoji and accent
+    const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
+    const moodColors = { blue: '#60a5fa', yellow: '#fbbf24', red: '#f87171' };
+    
+    // Draw mood indicator
+    ctx.font = '80px Arial';
+    ctx.fillText(moodEmojis[mood], 80, 120);
+    
+    // Draw accent line
+    ctx.fillStyle = moodColors[mood];
+    ctx.fillRect(80, 160, 100, 4);
+    
+    // Draw text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '42px Georgia, serif';
+    
+    let y = 240;
+    for (const line of textLines) {
+        ctx.fillText(line, 80, y);
+        y += 60;
+    }
+    
+    // Draw footer
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.font = '28px Arial';
+    ctx.fillText('— Aashish Joshi', 80, height - 120);
+    ctx.fillText(date, 80, height - 80);
+    
+    // Draw branding
+    ctx.fillStyle = moodColors[mood];
+    ctx.font = 'bold 24px Arial';
+    ctx.fillText('MoodRing', width - 180, height - 80);
+    
+    // Convert to image and download/share
+    canvas.toBlob(async (blob) => {
+        const file = new File([blob], 'moodring-post.png', { type: 'image/png' });
+        
+        // Try native share first (works on mobile)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'MoodRing Post',
+                    text: text.substring(0, 100)
+                });
+                showToast('Shared!');
+                return;
+            } catch (e) {
+                if (e.name !== 'AbortError') {
+                    console.log('Native share failed:', e);
+                }
+            }
+        }
+        
+        // Fallback: download the image
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'moodring-post.png';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Image saved! Share it on Instagram');
+    }, 'image/png');
+}
+
+function wrapText(ctx, text, maxWidth, fontSize) {
+    ctx.font = `${fontSize}px Georgia, serif`;
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+    
+    for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
+        }
+    }
+    
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+    
+    return lines;
+}
+
 function shareToFacebook(text) {
     const url = window.location.href;
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank', 'width=600,height=400');
@@ -1880,6 +2021,7 @@ window.openModal = openModal;
 window.handleDelete = handleDelete;
 window.toggleShareMenu = toggleShareMenu;
 window.shareToTwitter = shareToTwitter;
+window.shareAsImage = shareAsImage;
 window.shareToFacebook = shareToFacebook;
 window.shareToLinkedIn = shareToLinkedIn;
 window.shareToWhatsApp = shareToWhatsApp;
