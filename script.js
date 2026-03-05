@@ -1381,22 +1381,33 @@ async function shareAsImage(postId) {
     
     // Get post data
     const textEl = postCard.querySelector('.post-content');
-    const moodEl = postCard.querySelector('.post-mood');
     const dateEl = postCard.querySelector('.post-date');
+    const galleryImages = postCard.querySelectorAll('.gallery-image');
     
     const text = textEl?.innerText || '';
     const mood = postCard.classList.contains('blue') ? 'blue' : 
                  postCard.classList.contains('yellow') ? 'yellow' : 'red';
     const date = dateEl?.innerText || '';
     
+    // Collect image sources
+    const imageSrcs = [];
+    galleryImages.forEach(img => {
+        if (img.src) imageSrcs.push(img.src);
+    });
+    
     // Create canvas
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
-    // Size for Instagram Story (1080x1920) or square (1080x1080)
+    // Size for Instagram Story (1080x1920)
     const width = 1080;
     const textLines = wrapText(ctx, text, width - 160, 42);
-    const height = Math.max(1080, Math.min(1920, 400 + textLines.length * 60));
+    
+    // Calculate height based on content
+    const hasImages = imageSrcs.length > 0;
+    const imageAreaHeight = hasImages ? 600 : 0;
+    const textAreaHeight = 300 + textLines.length * 60;
+    const height = Math.max(1080, Math.min(1920, imageAreaHeight + textAreaHeight + 200));
     
     canvas.width = width;
     canvas.height = height;
@@ -1422,32 +1433,72 @@ async function shareAsImage(postId) {
     
     // Draw mood indicator
     ctx.font = '80px Arial';
-    ctx.fillText(moodEmojis[mood], 80, 120);
+    ctx.fillText(moodEmojis[mood], 80, 100);
     
     // Draw accent line
     ctx.fillStyle = moodColors[mood];
-    ctx.fillRect(80, 160, 100, 4);
+    ctx.fillRect(80, 140, 100, 4);
     
     // Draw text
     ctx.fillStyle = '#ffffff';
     ctx.font = '42px Georgia, serif';
     
-    let y = 240;
+    let y = 200;
     for (const line of textLines) {
         ctx.fillText(line, 80, y);
         y += 60;
     }
     
+    // Draw images if present
+    if (hasImages) {
+        const imgY = y + 40;
+        const imgAreaWidth = width - 160;
+        const imgAreaHeight = 500;
+        
+        // Load and draw images
+        const loadedImages = await Promise.all(
+            imageSrcs.slice(0, 4).map(src => loadImageForCanvas(src))
+        );
+        
+        const validImages = loadedImages.filter(img => img !== null);
+        
+        if (validImages.length === 1) {
+            // Single image - centered
+            drawImageCover(ctx, validImages[0], 80, imgY, imgAreaWidth, imgAreaHeight, 20);
+        } else if (validImages.length === 2) {
+            // Two images side by side
+            const imgW = (imgAreaWidth - 20) / 2;
+            drawImageCover(ctx, validImages[0], 80, imgY, imgW, imgAreaHeight, 20);
+            drawImageCover(ctx, validImages[1], 80 + imgW + 20, imgY, imgW, imgAreaHeight, 20);
+        } else if (validImages.length === 3) {
+            // One large, two small
+            const bigW = imgAreaWidth * 0.6;
+            const smallW = imgAreaWidth * 0.4 - 20;
+            const smallH = (imgAreaHeight - 20) / 2;
+            drawImageCover(ctx, validImages[0], 80, imgY, bigW, imgAreaHeight, 20);
+            drawImageCover(ctx, validImages[1], 80 + bigW + 20, imgY, smallW, smallH, 20);
+            drawImageCover(ctx, validImages[2], 80 + bigW + 20, imgY + smallH + 20, smallW, smallH, 20);
+        } else if (validImages.length >= 4) {
+            // 2x2 grid
+            const imgW = (imgAreaWidth - 20) / 2;
+            const imgH = (imgAreaHeight - 20) / 2;
+            drawImageCover(ctx, validImages[0], 80, imgY, imgW, imgH, 20);
+            drawImageCover(ctx, validImages[1], 80 + imgW + 20, imgY, imgW, imgH, 20);
+            drawImageCover(ctx, validImages[2], 80, imgY + imgH + 20, imgW, imgH, 20);
+            drawImageCover(ctx, validImages[3], 80 + imgW + 20, imgY + imgH + 20, imgW, imgH, 20);
+        }
+    }
+    
     // Draw footer
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.font = '28px Arial';
-    ctx.fillText('— Aashish Joshi', 80, height - 120);
-    ctx.fillText(date, 80, height - 80);
+    ctx.fillText('— Aashish Joshi', 80, height - 100);
+    ctx.fillText(date, 80, height - 60);
     
     // Draw branding
     ctx.fillStyle = moodColors[mood];
     ctx.font = 'bold 24px Arial';
-    ctx.fillText('MoodRing', width - 180, height - 80);
+    ctx.fillText('MoodRing', width - 180, height - 60);
     
     // Convert to image and download/share
     canvas.toBlob(async (blob) => {
@@ -1479,6 +1530,45 @@ async function shareAsImage(postId) {
         URL.revokeObjectURL(url);
         showToast('Image saved! Share it on Instagram');
     }, 'image/png');
+}
+
+function loadImageForCanvas(src) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img);
+        img.onerror = () => resolve(null);
+        img.src = src;
+    });
+}
+
+function drawImageCover(ctx, img, x, y, w, h, radius = 0) {
+    // Calculate cover dimensions
+    const imgRatio = img.width / img.height;
+    const boxRatio = w / h;
+    
+    let sx, sy, sw, sh;
+    if (imgRatio > boxRatio) {
+        sh = img.height;
+        sw = sh * boxRatio;
+        sx = (img.width - sw) / 2;
+        sy = 0;
+    } else {
+        sw = img.width;
+        sh = sw / boxRatio;
+        sx = 0;
+        sy = (img.height - sh) / 2;
+    }
+    
+    // Draw with rounded corners
+    ctx.save();
+    if (radius > 0) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, radius);
+        ctx.clip();
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+    ctx.restore();
 }
 
 function wrapText(ctx, text, maxWidth, fontSize) {
