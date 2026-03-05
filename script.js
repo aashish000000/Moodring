@@ -154,7 +154,7 @@ async function syncAllPostsToCloud() {
     
     for (const post of localPosts) {
         try {
-            // Prepare post data - remove images if too large
+            // Prepare post data
             const postData = {
                 id: post.id,
                 text: post.text,
@@ -166,12 +166,25 @@ async function syncAllPostsToCloud() {
                 audio: null
             };
             
-            // Only include images if they're small enough
-            if (post.images && JSON.stringify(post.images).length < 500000) {
-                postData.images = post.images;
-            }
-            if (post.image && post.image.length < 500000) {
-                postData.image = post.image;
+            // Compress images for cloud sync (max 100KB each)
+            if (post.images && post.images.length > 0) {
+                const compressedImages = [];
+                for (const img of post.images) {
+                    if (img && img.startsWith('data:')) {
+                        const compressed = await recompressForSync(img);
+                        if (compressed) compressedImages.push(compressed);
+                    }
+                }
+                if (compressedImages.length > 0) {
+                    postData.images = compressedImages;
+                    postData.image = compressedImages[0];
+                }
+            } else if (post.image && post.image.startsWith('data:')) {
+                const compressed = await recompressForSync(post.image);
+                if (compressed) {
+                    postData.image = compressed;
+                    postData.images = [compressed];
+                }
             }
             
             console.log('Syncing post:', post.id);
@@ -380,7 +393,21 @@ async function createPost(text, mood, images = [], audio = null) {
     if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            const { error } = await supabaseClient.from('posts').insert(newPost);
+            // Compress images for cloud
+            const cloudPost = { ...newPost };
+            if (cloudPost.images && cloudPost.images.length > 0) {
+                const compressedImages = [];
+                for (const img of cloudPost.images) {
+                    if (img && img.startsWith('data:')) {
+                        const compressed = await recompressForSync(img);
+                        if (compressed) compressedImages.push(compressed);
+                    }
+                }
+                cloudPost.images = compressedImages.length > 0 ? compressedImages : null;
+                cloudPost.image = compressedImages[0] || null;
+            }
+            
+            const { error } = await supabaseClient.from('posts').insert(cloudPost);
             if (error) {
                 console.log('Supabase insert error:', error);
                 updateSyncStatus('local');
@@ -961,6 +988,36 @@ function compressImage(file, maxWidth = 800, quality = 0.7) {
         };
         reader.onerror = reject;
         reader.readAsDataURL(file);
+    });
+}
+
+function recompressForSync(dataUrl, maxWidth = 400, quality = 0.5) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            
+            // Resize smaller for cloud sync
+            if (width > maxWidth) {
+                height = (height * maxWidth) / width;
+                width = maxWidth;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Compress to JPEG with lower quality for sync
+            const compressed = canvas.toDataURL('image/jpeg', quality);
+            console.log(`Recompressed for sync: ${(dataUrl.length / 1024).toFixed(0)}KB → ${(compressed.length / 1024).toFixed(0)}KB`);
+            resolve(compressed);
+        };
+        img.onerror = () => resolve(null);
+        img.src = dataUrl;
     });
 }
 
