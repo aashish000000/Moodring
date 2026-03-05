@@ -2134,9 +2134,23 @@ body {
     }
 
     .sync-status {
+        display: flex;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.7rem;
+        background: var(--accent-blue-bg);
+        border-color: var(--accent-blue);
+        color: var(--accent-blue);
+    }
+    
+    .sync-status .sync-text {
         display: none;
     }
     
+    .sync-status::after {
+        content: 'Sync';
+        font-weight: 600;
+    }
+
     .icon-btn,
     .theme-toggle {
         width: 36px;
