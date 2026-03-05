@@ -42,8 +42,8 @@
     <link rel="manifest" href="manifest.json">
     
     <!-- Favicon & Icons -->
-    <link rel="icon" type="image/png" href="avatar.png">
-    <link rel="apple-touch-icon" href="avatar.png">
+    <link rel="icon" type="image/png" href="assets/avatar.png">
+    <link rel="apple-touch-icon" href="assets/avatar.png">
     
     <!-- RSS Feed -->
     <link rel="alternate" type="application/rss+xml" title="Aashish Joshi Blog RSS Feed" href="feed.xml">
@@ -81,7 +81,7 @@
     </script>
     
     <!-- Styles -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
     <!-- Dynamic Background Overlay -->
@@ -164,7 +164,7 @@
         <!-- About Section -->
         <section class="about-section">
             <div class="about-content">
-                <img src="avatar.png" alt="Aashish Joshi" class="avatar">
+                <img src="assets/avatar.png" alt="Aashish Joshi" class="avatar">
                 <div class="about-text">
                     <p>Welcome to my corner of the internet. This is where I share my unfiltered thoughts—the melancholic musings, the vibrant celebrations, and the fiery rants. Feel free to explore based on how you're feeling today.</p>
                     <div class="social-links">
@@ -375,6 +375,17 @@
     </div>
 
     <!-- JavaScript -->
-    <script src="script.js"></script>
+    <script src="js/script.js"></script>
+    
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/js/sw.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed:', err));
+            });
+        }
+    </script>
 </body>
 </html>

@@ -1,11 +1,12 @@
 // Service Worker for PWA
-const CACHE_NAME = 'aashish-blog-v1';
+const CACHE_NAME = 'aashish-blog-v2';
 const urlsToCache = [
     '/',
     '/index.html',
-    '/styles.css',
-    '/script.js',
-    '/manifest.json'
+    '/css/styles.css',
+    '/js/script.js',
+    '/manifest.json',
+    '/assets/avatar.png'
 ];
 
 // Install event
