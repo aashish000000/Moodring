@@ -202,7 +202,32 @@ function getLocalPosts() {
 }
 
 function saveLocalPosts(posts) {
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(posts));
+    try {
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(posts));
+    } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
+            console.error('Storage quota exceeded, clearing old posts...');
+            // Keep only the 10 most recent posts
+            const trimmedPosts = posts.slice(0, 10);
+            // Remove images from older posts to save space
+            const lighterPosts = trimmedPosts.map((p, i) => {
+                if (i > 5) {
+                    return { ...p, images: null, image: null, audio: null };
+                }
+                return p;
+            });
+            try {
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(lighterPosts));
+                showToast('Storage full - some old images removed');
+            } catch (e2) {
+                // Last resort: clear everything except the newest post
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify([posts[0]]));
+                showToast('Storage full - only newest post kept');
+            }
+        } else {
+            throw e;
+        }
+    }
 }
 
 async function getAllPosts() {
@@ -817,45 +842,82 @@ function hideLoginModal() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// IMAGE UPLOAD (Multiple)
+// IMAGE UPLOAD (Multiple) with Compression
 // ═══════════════════════════════════════════════════════════════
+function compressImage(file, maxWidth = 800, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Resize if too large
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Compress to JPEG
+                const compressed = canvas.toDataURL('image/jpeg', quality);
+                console.log(`Image compressed: ${(file.size / 1024).toFixed(0)}KB → ${(compressed.length / 1024).toFixed(0)}KB`);
+                resolve(compressed);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 function handleImageUpload(files) {
     if (!files || files.length === 0) {
         showToast('Please select images');
         return;
     }
-    
+
     const maxImages = 4;
     const remainingSlots = maxImages - currentPostImages.length;
-    
+
     if (remainingSlots <= 0) {
         showToast('Maximum 4 images allowed');
         return;
     }
-    
+
     const filesToProcess = Array.from(files).slice(0, remainingSlots);
     let processed = 0;
-    
-    filesToProcess.forEach(file => {
+
+    filesToProcess.forEach(async file => {
         if (!file.type.startsWith('image/')) {
             showToast('Please select only images');
             return;
         }
-        if (file.size > 5 * 1024 * 1024) {
-            showToast('Each image must be under 5MB');
+        if (file.size > 10 * 1024 * 1024) {
+            showToast('Each image must be under 10MB');
             return;
         }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            currentPostImages.push(e.target.result);
+
+        try {
+            const compressed = await compressImage(file);
+            currentPostImages.push(compressed);
             processed++;
             if (processed === filesToProcess.length) {
                 showImagePreview();
                 showToast(`${processed} image${processed > 1 ? 's' : ''} added`);
             }
-        };
-        reader.readAsDataURL(file);
+        } catch (err) {
+            console.error('Image compression failed:', err);
+            showToast('Failed to process image');
+        }
     });
 }
 
