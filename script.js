@@ -1380,11 +1380,30 @@ function setupEventListeners() {
         validateForm();
     });
     
-    document.getElementById('postForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!selectedMood || !thoughtInput?.value.trim()) return;
+    async function handlePublish() {
+        console.log('Publishing...');
+        console.log('selectedMood:', selectedMood);
+        console.log('thoughtInput value:', thoughtInput?.value);
+        console.log('IS_ADMIN:', IS_ADMIN);
+        
+        if (!selectedMood) {
+            showToast('Please select a mood first');
+            return;
+        }
+        
+        if (!thoughtInput?.value.trim()) {
+            showToast('Please write something first');
+            return;
+        }
+        
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Publishing...';
+        }
         
         try {
+            console.log('Creating post...');
             await createPost(thoughtInput.value, selectedMood, currentPostImages, currentPostAudio);
             closeModal();
             clearDraft();
@@ -1392,7 +1411,25 @@ function setupEventListeners() {
             await renderPosts();
             await updateCounts();
         } catch (err) {
-            showToast('Failed to publish');
+            console.error('Publish error:', err);
+            showToast('Failed to publish: ' + err.message);
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Publish';
+            }
+        }
+    }
+    
+    document.getElementById('postForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await handlePublish();
+    });
+    
+    // Also add click handler as fallback
+    document.getElementById('submitBtn')?.addEventListener('click', async (e) => {
+        if (!e.target.disabled) {
+            e.preventDefault();
+            await handlePublish();
         }
     });
     
