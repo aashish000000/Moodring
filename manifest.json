@@ -1,7 +1,7 @@
 {
-    "name": "Aashish Joshi - Personal Blog",
-    "short_name": "Aashish's Blog",
-    "description": "Thoughts, ideas & creative musings by Aashish Joshi",
+    "name": "MoodRing",
+    "short_name": "MoodRing",
+    "description": "Share your mood — melancholic musings, vibrant celebrations & fiery rants",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#fafafa",
