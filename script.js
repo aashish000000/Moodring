@@ -299,17 +299,23 @@ async function getAllPosts() {
     // Try Supabase
     if (supabaseClient) {
         try {
+            console.log('Fetching posts from Supabase...');
             const { data, error } = await supabaseClient
                 .from('posts')
                 .select('*')
                 .order('timestamp', { ascending: false });
 
-            if (!error && data) {
+            if (error) {
+                console.error('Supabase fetch error:', error);
+            } else if (data) {
+                console.log('Supabase posts found:', data.length);
                 supabasePosts = data;
             }
         } catch (e) {
-            console.log('Supabase fetch failed:', e);
+            console.error('Supabase fetch failed:', e);
         }
+    } else {
+        console.log('Supabase client not initialized');
     }
 
     // Get local posts
