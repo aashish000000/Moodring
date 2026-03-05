@@ -869,6 +869,7 @@ body {
 
 /* Action Buttons */
 .delete-btn,
+.edit-btn,
 .share-btn {
     background: none;
     border: none;
@@ -881,8 +882,15 @@ body {
 }
 
 .post-card:hover .delete-btn,
+.post-card:hover .edit-btn,
 .post-card:hover .share-btn {
     opacity: 0.6;
+}
+
+.edit-btn:hover {
+    opacity: 1 !important;
+    color: var(--accent-blue);
+    background: var(--accent-blue-bg);
 }
 
 .delete-btn:hover {
@@ -898,6 +906,7 @@ body {
 }
 
 .delete-btn svg,
+.edit-btn svg,
 .share-btn svg {
     width: 16px;
     height: 16px;
@@ -2323,12 +2332,14 @@ body {
     }
 
     .delete-btn,
+    .edit-btn,
     .share-btn {
         opacity: 0.7;
         padding: 0.35rem;
     }
-    
+
     .delete-btn svg,
+    .edit-btn svg,
     .share-btn svg {
         width: 14px;
         height: 14px;
@@ -4480,8 +4491,9 @@ body {
         opacity: 0.8;
     }
     
-    /* Show share/delete buttons always on touch devices */
+    /* Show share/delete/edit buttons always on touch devices */
     .delete-btn,
+    .edit-btn,
     .share-btn {
         opacity: 0.7 !important;
     }
