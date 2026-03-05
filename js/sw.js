@@ -1,5 +1,5 @@
 // Service Worker for PWA
-const CACHE_NAME = 'aashish-blog-v2';
+const CACHE_NAME = 'moodring-v1';
 const urlsToCache = [
     '/',
     '/index.html',
