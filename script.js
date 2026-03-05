@@ -130,6 +130,69 @@ function updateSyncStatus(status) {
     }
 }
 
+async function syncAllPostsToCloud() {
+    if (!supabaseClient) {
+        showToast('Supabase not connected');
+        return;
+    }
+    
+    const localPosts = getLocalPosts().filter(p => !p.isSample);
+    if (localPosts.length === 0) {
+        showToast('No local posts to sync');
+        return;
+    }
+    
+    showToast('Syncing posts to cloud...');
+    updateSyncStatus('syncing');
+    
+    let synced = 0;
+    let failed = 0;
+    
+    for (const post of localPosts) {
+        try {
+            // Check if already exists
+            const { data: existing } = await supabaseClient
+                .from('posts')
+                .select('id')
+                .eq('id', post.id)
+                .single();
+            
+            if (!existing) {
+                const { error } = await supabaseClient.from('posts').insert({
+                    id: post.id,
+                    text: post.text,
+                    mood: post.mood,
+                    date: post.date,
+                    timestamp: post.timestamp,
+                    images: post.images,
+                    image: post.image,
+                    audio: post.audio
+                });
+                
+                if (error) {
+                    console.error('Sync error for post:', post.id, error);
+                    failed++;
+                } else {
+                    synced++;
+                }
+            }
+        } catch (e) {
+            console.error('Sync failed for post:', post.id, e);
+            failed++;
+        }
+    }
+    
+    updateSyncStatus('synced');
+    
+    if (synced > 0) {
+        showToast(`${synced} post${synced > 1 ? 's' : ''} synced to cloud!`);
+    } else if (failed > 0) {
+        showToast(`Sync failed for ${failed} posts`);
+    } else {
+        showToast('All posts already synced');
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // AUTHENTICATION - Admin Only
 // ═══════════════════════════════════════════════════════════════
@@ -1752,6 +1815,7 @@ window.toggleVoice = toggleVoice;
 window.toggleAudioRecording = toggleAudioRecording;
 window.saveDraft = saveDraft;
 window.restoreDraft = restoreDraft;
+window.syncAllPostsToCloud = syncAllPostsToCloud;
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
