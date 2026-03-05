@@ -132,11 +132,14 @@ function updateSyncStatus(status) {
 
 async function syncAllPostsToCloud() {
     if (!supabaseClient) {
-        showToast('Supabase not connected');
+        showToast('Not connected to cloud. Check internet.');
+        console.error('Supabase client not initialized');
         return;
     }
     
     const localPosts = getLocalPosts().filter(p => !p.isSample);
+    console.log('Local posts to sync:', localPosts.length);
+    
     if (localPosts.length === 0) {
         showToast('No local posts to sync');
         return;
@@ -147,47 +150,60 @@ async function syncAllPostsToCloud() {
     
     let synced = 0;
     let failed = 0;
+    let lastError = null;
     
     for (const post of localPosts) {
         try {
-            // Check if already exists
-            const { data: existing } = await supabaseClient
-                .from('posts')
-                .select('id')
-                .eq('id', post.id)
-                .single();
+            // Prepare post data - remove images if too large
+            const postData = {
+                id: post.id,
+                text: post.text,
+                mood: post.mood,
+                date: post.date,
+                timestamp: post.timestamp,
+                images: null,
+                image: null,
+                audio: null
+            };
             
-            if (!existing) {
-                const { error } = await supabaseClient.from('posts').insert({
-                    id: post.id,
-                    text: post.text,
-                    mood: post.mood,
-                    date: post.date,
-                    timestamp: post.timestamp,
-                    images: post.images,
-                    image: post.image,
-                    audio: post.audio
-                });
-                
-                if (error) {
-                    console.error('Sync error for post:', post.id, error);
-                    failed++;
-                } else {
-                    synced++;
-                }
+            // Only include images if they're small enough
+            if (post.images && JSON.stringify(post.images).length < 500000) {
+                postData.images = post.images;
+            }
+            if (post.image && post.image.length < 500000) {
+                postData.image = post.image;
+            }
+            
+            console.log('Syncing post:', post.id);
+            
+            // Use upsert to handle both insert and update
+            const { error } = await supabaseClient
+                .from('posts')
+                .upsert(postData, { onConflict: 'id' });
+            
+            if (error) {
+                console.error('Sync error for post:', post.id, error.message, error);
+                lastError = error.message;
+                failed++;
+            } else {
+                console.log('Post synced:', post.id);
+                synced++;
             }
         } catch (e) {
-            console.error('Sync failed for post:', post.id, e);
+            console.error('Sync exception for post:', post.id, e);
+            lastError = e.message;
             failed++;
         }
     }
     
-    updateSyncStatus('synced');
+    updateSyncStatus(synced > 0 ? 'synced' : 'local');
     
-    if (synced > 0) {
-        showToast(`${synced} post${synced > 1 ? 's' : ''} synced to cloud!`);
+    if (synced > 0 && failed === 0) {
+        showToast(`${synced} post${synced > 1 ? 's' : ''} synced!`);
+    } else if (synced > 0 && failed > 0) {
+        showToast(`${synced} synced, ${failed} failed`);
     } else if (failed > 0) {
-        showToast(`Sync failed for ${failed} posts`);
+        showToast(`Sync failed: ${lastError || 'Unknown error'}`);
     } else {
         showToast('All posts already synced');
     }
