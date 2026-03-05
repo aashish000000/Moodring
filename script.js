@@ -93,6 +93,7 @@ let searchQuery = '';
 let selectedMood = null;
 let currentPostImages = [];
 let currentPostAudio = null;
+let editingPostId = null; // Track if we're editing a post
 
 const moodLabels = { blue: 'Melancholy', yellow: 'Vibrant', red: 'Fiery' };
 const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
@@ -701,6 +702,11 @@ function renderPostCard(post) {
                 <span class="post-reading-time">${calculateReadingTime(post.text)}</span>
                 ${isOwner ? `
                     <div class="post-actions admin-only">
+                        <button class="edit-btn" onclick="handleEdit('${post.id}')" title="Edit">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
                         <button class="delete-btn" onclick="handleDelete('${post.id}')" title="Delete">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -883,22 +889,31 @@ function openModal(preselectedMood = null) {
         showToast('Only Aashish can write posts');
         return;
     }
-    
+
+    // Reset edit mode
+    editingPostId = null;
+
     const modalOverlay = document.getElementById('modalOverlay');
     const thoughtInput = document.getElementById('thoughtInput');
     const charCount = document.getElementById('charCount');
     const moodOptions = document.querySelectorAll('.mood-option');
-    
+    const submitBtn = document.getElementById('submitBtn');
+    const modalTitle = document.querySelector('.modal-header h2');
+
+    // Reset title and button
+    if (modalTitle) modalTitle.textContent = 'New Post';
+    if (submitBtn) submitBtn.textContent = 'Publish';
+
     if (thoughtInput) thoughtInput.value = '';
     if (charCount) charCount.textContent = '0';
-    
+
     moodOptions.forEach(o => o.classList.remove('selected'));
     selectedMood = null;
     currentPostImages = [];
     currentPostAudio = null;
     removeImage();
     removeAudio();
-    
+
     if (preselectedMood) {
         const moodBtn = document.querySelector(`.mood-option.${preselectedMood}`);
         if (moodBtn) {
@@ -907,13 +922,14 @@ function openModal(preselectedMood = null) {
             fetchAIPrompt(preselectedMood);
         }
     }
-    
+
     validateForm();
     if (modalOverlay) modalOverlay.classList.add('visible');
     if (thoughtInput) setTimeout(() => thoughtInput.focus(), 250);
 }
 
 function closeModal() {
+    editingPostId = null;
     const modalOverlay = document.getElementById('modalOverlay');
     if (modalOverlay) modalOverlay.classList.remove('visible');
 }
@@ -1735,6 +1751,143 @@ async function fetchWeather() {
 // ═══════════════════════════════════════════════════════════════
 // EVENT HANDLERS
 // ═══════════════════════════════════════════════════════════════
+async function handleEdit(postId) {
+    // Only admin can edit
+    if (!IS_ADMIN) {
+        showToast('Only Aashish can edit posts');
+        return;
+    }
+    
+    // Find the post
+    const posts = await getAllPosts();
+    const post = posts.find(p => p.id === postId);
+    
+    if (!post) {
+        showToast('Post not found');
+        return;
+    }
+    
+    // Open modal in edit mode
+    openModalForEdit(post);
+}
+
+function openModalForEdit(post) {
+    if (!IS_ADMIN) {
+        showToast('Only Aashish can edit posts');
+        return;
+    }
+    
+    editingPostId = post.id;
+    
+    const modalOverlay = document.getElementById('modalOverlay');
+    const thoughtInput = document.getElementById('thoughtInput');
+    const charCount = document.getElementById('charCount');
+    const moodOptions = document.querySelectorAll('.mood-option');
+    const submitBtn = document.getElementById('submitBtn');
+    const modalTitle = document.querySelector('.modal-header h2');
+    
+    // Set title to "Edit Post"
+    if (modalTitle) modalTitle.textContent = 'Edit Post';
+    
+    // Fill in the existing content
+    if (thoughtInput) {
+        thoughtInput.value = post.text;
+        if (charCount) charCount.textContent = post.text.length;
+    }
+    
+    // Select the mood
+    moodOptions.forEach(o => o.classList.remove('selected'));
+    const moodBtn = document.querySelector(`.mood-option.${post.mood}`);
+    if (moodBtn) {
+        moodBtn.classList.add('selected');
+        selectedMood = post.mood;
+    }
+    
+    // Load images
+    currentPostImages = [];
+    if (post.images && post.images.length > 0) {
+        currentPostImages = [...post.images];
+        showImagePreview();
+    } else if (post.image) {
+        currentPostImages = [post.image];
+        showImagePreview();
+    }
+    
+    // Load audio
+    currentPostAudio = post.audio || null;
+    if (currentPostAudio) {
+        showAudioPreview();
+    }
+    
+    // Update button text
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Update';
+    }
+    
+    if (modalOverlay) modalOverlay.classList.add('visible');
+    if (thoughtInput) setTimeout(() => thoughtInput.focus(), 250);
+}
+
+async function updatePost(postId, text, mood, images = [], audio = null) {
+    const updatedData = {
+        text: text.trim(),
+        mood,
+        images: images.length > 0 ? images : null,
+        image: images.length >= 1 ? images[0] : null,
+        audio
+    };
+    
+    console.log('Updating post:', postId);
+    
+    // Update locally
+    const localPosts = getLocalPosts();
+    const index = localPosts.findIndex(p => p.id === postId);
+    if (index !== -1) {
+        localPosts[index] = { ...localPosts[index], ...updatedData };
+        saveLocalPosts(localPosts);
+        console.log('Post updated locally');
+    }
+    
+    // Update in Supabase
+    if (supabaseClient) {
+        updateSyncStatus('syncing');
+        try {
+            // Compress images for cloud
+            const cloudData = { ...updatedData };
+            if (cloudData.images && cloudData.images.length > 0) {
+                const compressedImages = [];
+                for (const img of cloudData.images) {
+                    if (img && img.startsWith('data:')) {
+                        const compressed = await recompressForSync(img);
+                        if (compressed) compressedImages.push(compressed);
+                    }
+                }
+                cloudData.images = compressedImages.length > 0 ? compressedImages : null;
+                cloudData.image = compressedImages[0] || null;
+            }
+            
+            const { error } = await supabaseClient
+                .from('posts')
+                .update(cloudData)
+                .eq('id', postId);
+            
+            if (error) {
+                console.log('Supabase update error:', error);
+                updateSyncStatus('local');
+            } else {
+                console.log('Post updated in Supabase');
+                updateSyncStatus('synced');
+            }
+        } catch (e) {
+            console.log('Supabase update failed:', e);
+            updateSyncStatus('local');
+        }
+    }
+    
+    return true;
+}
+
 async function handleDelete(postId) {
     // Only admin can delete
     if (!IS_ADMIN) {
@@ -1842,41 +1995,50 @@ function setupEventListeners() {
     });
     
     async function handlePublish() {
-        console.log('Publishing...');
+        console.log('Publishing/Updating...');
+        console.log('editingPostId:', editingPostId);
         console.log('selectedMood:', selectedMood);
         console.log('thoughtInput value:', thoughtInput?.value);
         console.log('IS_ADMIN:', IS_ADMIN);
-        
+
         if (!selectedMood) {
             showToast('Please select a mood first');
             return;
         }
-        
+
         if (!thoughtInput?.value.trim()) {
             showToast('Please write something first');
             return;
         }
-        
+
         const submitBtn = document.getElementById('submitBtn');
+        const isEditing = editingPostId !== null;
+        
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.textContent = 'Publishing...';
+            submitBtn.textContent = isEditing ? 'Updating...' : 'Publishing...';
         }
-        
+
         try {
-            console.log('Creating post...');
-            await createPost(thoughtInput.value, selectedMood, currentPostImages, currentPostAudio);
+            if (isEditing) {
+                console.log('Updating post:', editingPostId);
+                await updatePost(editingPostId, thoughtInput.value, selectedMood, currentPostImages, currentPostAudio);
+                showToast('Post updated!');
+            } else {
+                console.log('Creating post...');
+                await createPost(thoughtInput.value, selectedMood, currentPostImages, currentPostAudio);
+                showToast('Post published!');
+            }
             closeModal();
             clearDraft();
-            showToast('Post published!');
             await renderPosts();
             await updateCounts();
         } catch (err) {
-            console.error('Publish error:', err);
-            showToast('Failed to publish: ' + err.message);
+            console.error('Publish/Update error:', err);
+            showToast('Failed: ' + err.message);
             if (submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'Publish';
+                submitBtn.textContent = isEditing ? 'Update' : 'Publish';
             }
         }
     }
@@ -2109,6 +2271,7 @@ function insertFormat(format) {
 // Make functions globally available
 window.openModal = openModal;
 window.handleDelete = handleDelete;
+window.handleEdit = handleEdit;
 window.toggleShareMenu = toggleShareMenu;
 window.shareToTwitter = shareToTwitter;
 window.shareAsImage = shareAsImage;
