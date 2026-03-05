@@ -758,7 +758,20 @@ function validateForm() {
     const hasText = thoughtInput && thoughtInput.value.trim().length > 0;
     const hasMood = selectedMood !== null;
     
-    if (submitBtn) submitBtn.disabled = !(hasText && hasMood);
+    if (submitBtn) {
+        submitBtn.disabled = !(hasText && hasMood);
+        
+        // Update button text to show what's missing
+        if (!hasText && !hasMood) {
+            submitBtn.textContent = 'Write & select mood';
+        } else if (!hasText) {
+            submitBtn.textContent = 'Write something';
+        } else if (!hasMood) {
+            submitBtn.textContent = 'Select a mood';
+        } else {
+            submitBtn.textContent = 'Publish';
+        }
+    }
 }
 
 function showLoginModal() {
