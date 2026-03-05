@@ -206,26 +206,43 @@ function saveLocalPosts(posts) {
 }
 
 async function getAllPosts() {
-    // Try Supabase first
+    let supabasePosts = [];
+    
+    // Try Supabase
     if (supabaseClient) {
         try {
             const { data, error } = await supabaseClient
                 .from('posts')
                 .select('*')
                 .order('timestamp', { ascending: false });
-            
-            if (!error && data && data.length > 0) {
-                return data;
+
+            if (!error && data) {
+                supabasePosts = data;
             }
         } catch (e) {
             console.log('Supabase fetch failed:', e);
         }
     }
-    
-    // Fallback to local + samples
+
+    // Get local posts
     const localPosts = getLocalPosts();
-    const allPosts = [...localPosts, ...samplePosts];
-    return allPosts.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Merge: local posts + supabase posts (avoiding duplicates by ID)
+    const supabaseIds = new Set(supabasePosts.map(p => p.id));
+    const uniqueLocalPosts = localPosts.filter(p => !supabaseIds.has(p.id));
+    
+    // Combine all: local (not in supabase) + supabase + samples
+    const allPosts = [...uniqueLocalPosts, ...supabasePosts, ...samplePosts];
+    
+    // Remove duplicate sample posts if they exist in supabase
+    const seenIds = new Set();
+    const dedupedPosts = allPosts.filter(p => {
+        if (seenIds.has(p.id)) return false;
+        seenIds.add(p.id);
+        return true;
+    });
+    
+    return dedupedPosts.sort((a, b) => b.timestamp - a.timestamp);
 }
 
 async function createPost(text, mood, images = [], audio = null) {
@@ -241,17 +258,26 @@ async function createPost(text, mood, images = [], audio = null) {
         audio,
     };
     
-    // Save locally
+    console.log('Creating new post:', newPost.id);
+    
+    // Save locally first (always works)
     const localPosts = getLocalPosts();
     localPosts.unshift({ ...newPost, isSample: false });
     saveLocalPosts(localPosts);
+    console.log('Post saved locally. Total local posts:', localPosts.length);
     
-    // Sync to Supabase
+    // Try to sync to Supabase
     if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            await supabaseClient.from('posts').insert(newPost);
-            updateSyncStatus('synced');
+            const { error } = await supabaseClient.from('posts').insert(newPost);
+            if (error) {
+                console.log('Supabase insert error:', error);
+                updateSyncStatus('local');
+            } else {
+                console.log('Post synced to Supabase');
+                updateSyncStatus('synced');
+            }
         } catch (e) {
             console.log('Supabase sync failed:', e);
             updateSyncStatus('local');
