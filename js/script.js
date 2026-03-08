@@ -519,11 +519,14 @@ async function createPost(text, mood, images = [], audio = null, video = null) {
     if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            // Compress images for cloud and strip large media data
+            // Compress images for cloud and strip local-only fields
             const cloudPost = { ...newPost };
-            // Remove large media data - these are stored locally in IndexedDB
+            // Remove fields that are stored locally in IndexedDB (not in Supabase schema)
             delete cloudPost.videoData;
             delete cloudPost.audioData;
+            delete cloudPost.imageRefs;
+            delete cloudPost.video;  // IndexedDB reference, not needed in cloud
+            delete cloudPost.audio;  // IndexedDB reference, not needed in cloud
             
             if (cloudPost.images && cloudPost.images.length > 0) {
                 const compressedImages = [];
@@ -2227,11 +2230,14 @@ async function updatePost(postId, text, mood, images = [], audio = null, video =
     if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            // Compress images for cloud and strip large media data
+            // Compress images for cloud and strip local-only fields
             const cloudData = { ...updatedData };
-            // Remove large media data - these are stored locally in IndexedDB
+            // Remove fields that are stored locally in IndexedDB (not in Supabase schema)
             delete cloudData.videoData;
             delete cloudData.audioData;
+            delete cloudData.imageRefs;
+            delete cloudData.video;  // IndexedDB reference, not needed in cloud
+            delete cloudData.audio;  // IndexedDB reference, not needed in cloud
             
             if (cloudData.images && cloudData.images.length > 0) {
                 const compressedImages = [];
