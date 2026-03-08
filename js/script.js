@@ -1,7 +1,9 @@
 // ═══════════════════════════════════════════════════════════════
 // MOODRING - Personal Mood Blog by Aashish Joshi
 // Admin-only posting, visitors can view and react
+// Version: 2026-03-08-v4
 // ═══════════════════════════════════════════════════════════════
+console.log('🎭 MoodRing Script Version: 2026-03-08-v4');
 
 // ═══════════════════════════════════════════════════════════════
 // API CONFIGURATION
@@ -1368,12 +1370,15 @@ function removeImage(index) {
 // VIDEO UPLOAD
 // ═══════════════════════════════════════════════════════════════
 function handleVideoUpload(files) {
+    console.log('📹 handleVideoUpload called with', files?.length, 'files');
+    
     if (!files || files.length === 0) {
         showToast('Please select a video');
         return;
     }
 
     const file = files[0];
+    console.log('📹 Video file:', file.name, 'Type:', file.type, 'Size:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
     
     if (!file.type.startsWith('video/')) {
         showToast('Please select a video file');
@@ -1389,10 +1394,12 @@ function handleVideoUpload(files) {
     const reader = new FileReader();
     reader.onload = (e) => {
         currentPostVideo = e.target.result;
+        console.log('📹 Video loaded as data URL, length:', currentPostVideo?.length);
         showVideoPreview();
         showToast('Video added');
     };
-    reader.onerror = () => {
+    reader.onerror = (err) => {
+        console.error('📹 Failed to load video:', err);
         showToast('Failed to load video');
     };
     reader.readAsDataURL(file);
@@ -2414,6 +2421,9 @@ function setupEventListeners() {
                 showToast('Post updated!');
             } else {
                 console.log('Creating post...');
+                console.log('📹 currentPostVideo:', currentPostVideo ? 'Present (' + currentPostVideo.length + ' chars)' : 'NULL');
+                console.log('📷 currentPostImages:', currentPostImages?.length || 0);
+                console.log('🎤 currentPostAudio:', currentPostAudio ? 'Present' : 'NULL');
                 await createPost(thoughtInput.innerHTML, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
                 showToast('Post published!');
             }
