@@ -408,12 +408,29 @@ async function getAllPosts() {
     // Get local posts
     const localPosts = getLocalPosts();
     
-    // Merge: local posts + supabase posts (avoiding duplicates by ID)
+    // Create a map of local posts for quick lookup
+    const localPostsMap = new Map(localPosts.map(p => [p.id, p]));
+    
+    // Merge Supabase posts with local media references (video/audio stored in IndexedDB)
+    const mergedSupabasePosts = supabasePosts.map(sp => {
+        const localPost = localPostsMap.get(sp.id);
+        if (localPost) {
+            // Preserve local video/audio references that are stored in IndexedDB
+            return {
+                ...sp,
+                video: localPost.video || sp.video,
+                audio: localPost.audio || sp.audio,
+            };
+        }
+        return sp;
+    });
+    
+    // Get local-only posts (not in Supabase)
     const supabaseIds = new Set(supabasePosts.map(p => p.id));
     const uniqueLocalPosts = localPosts.filter(p => !supabaseIds.has(p.id));
     
-    // Combine all: local (not in supabase) + supabase + samples
-    const allPosts = [...uniqueLocalPosts, ...supabasePosts, ...samplePosts];
+    // Combine all: local (not in supabase) + merged supabase + samples
+    const allPosts = [...uniqueLocalPosts, ...mergedSupabasePosts, ...samplePosts];
     
     // Remove duplicate sample posts if they exist in supabase
     const seenIds = new Set();
@@ -482,8 +499,12 @@ async function createPost(text, mood, images = [], audio = null, video = null) {
     if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            // Compress images for cloud
+            // Compress images for cloud and strip large media data
             const cloudPost = { ...newPost };
+            // Remove large media data - these are stored locally in IndexedDB
+            delete cloudPost.videoData;
+            delete cloudPost.audioData;
+            
             if (cloudPost.images && cloudPost.images.length > 0) {
                 const compressedImages = [];
                 for (const img of cloudPost.images) {
@@ -698,16 +719,25 @@ async function renderPosts() {
 async function loadMediaFromIDB() {
     // Load videos
     const videoContainers = document.querySelectorAll('[data-video-ref]');
+    console.log('Loading media from IndexedDB. Video containers found:', videoContainers.length);
+    
     for (const container of videoContainers) {
         const videoRef = container.getAttribute('data-video-ref');
+        console.log('Processing video ref:', videoRef);
+        
         if (videoRef && videoRef.startsWith('video-')) {
             try {
                 const videoData = await getMediaFromIDB(videoRef);
+                console.log('Video data from IndexedDB:', videoData ? 'Found (' + videoData.length + ' chars)' : 'Not found');
+                
                 if (videoData) {
                     const videoEl = container.querySelector('video');
                     if (videoEl) {
                         videoEl.src = videoData;
+                        console.log('Video src set successfully');
                     }
+                } else {
+                    console.warn('No video data found in IndexedDB for ref:', videoRef);
                 }
             } catch (e) {
                 console.error('Failed to load video from IndexedDB:', e);
@@ -2130,8 +2160,12 @@ async function updatePost(postId, text, mood, images = [], audio = null, video =
     if (supabaseClient) {
         updateSyncStatus('syncing');
         try {
-            // Compress images for cloud
+            // Compress images for cloud and strip large media data
             const cloudData = { ...updatedData };
+            // Remove large media data - these are stored locally in IndexedDB
+            delete cloudData.videoData;
+            delete cloudData.audioData;
+            
             if (cloudData.images && cloudData.images.length > 0) {
                 const compressedImages = [];
                 for (const img of cloudData.images) {
