@@ -2185,17 +2185,22 @@ function openModalForEdit(post) {
 }
 
 async function updatePost(postId, text, mood, images = [], audio = null, video = null) {
+    console.log('📹 updatePost called with video:', video ? 'Present (' + video.length + ' chars)' : 'NULL');
+    
     // Store video in IndexedDB if present
     let videoRef = null;
     if (video && video.startsWith('data:')) {
         const videoId = 'video-' + postId;
+        console.log('📹 Attempting to save video to IndexedDB with ID:', videoId);
         try {
             await saveMediaToIDB(videoId, video, 'video');
             videoRef = videoId;
-            console.log('Video saved to IndexedDB:', videoId);
+            console.log('📹 Video saved to IndexedDB successfully:', videoId);
         } catch (e) {
-            console.error('Failed to save video to IndexedDB:', e);
+            console.error('📹 Failed to save video to IndexedDB:', e);
         }
+    } else {
+        console.log('📹 No video to save (video is null or not a data URL)');
     }
     
     // Store audio in IndexedDB if present
@@ -2222,6 +2227,7 @@ async function updatePost(postId, text, mood, images = [], audio = null, video =
         audioData: audio,
     };
     
+    console.log('📹 updatedData.video:', updatedData.video);
     console.log('Updating post:', postId);
     
     // Update locally
@@ -2229,8 +2235,11 @@ async function updatePost(postId, text, mood, images = [], audio = null, video =
     const index = localPosts.findIndex(p => p.id === postId);
     if (index !== -1) {
         localPosts[index] = { ...localPosts[index], ...updatedData };
+        console.log('📹 Post after merge, video ref:', localPosts[index].video);
         saveLocalPosts(localPosts);
         console.log('Post updated locally');
+    } else {
+        console.log('⚠️ Post not found in local posts!');
     }
     
     // Update in Supabase
