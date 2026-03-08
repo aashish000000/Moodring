@@ -1767,50 +1767,33 @@ async function shareAsImage(postId) {
     // Dynamic sizing constants
     const MAX_LINES = 8;
     const LINE_HEIGHT = 55;
-    const PARAGRAPH_GAP = 28;
     const FONT_SIZE = 40;
     const PADDING = 60;
     const MIN_HEIGHT = 450;
     const width = 1080;
     
-    // Wrap text (preserves paragraph breaks) and check if truncation is needed
+    // Wrap text and check if truncation is needed
     const allLines = wrapText(ctx, text, width - (PADDING * 2), FONT_SIZE);
-    const contentLineCount = allLines.filter(l => l.length > 0).length;
-    const isTruncated = contentLineCount > MAX_LINES;
+    const isTruncated = allLines.length > MAX_LINES;
+    const textLines = isTruncated ? allLines.slice(0, MAX_LINES) : allLines;
     
-    // Truncate: keep lines until we hit MAX_LINES content lines (include gap lines in between)
-    let textLines;
-    if (isTruncated) {
-        let count = 0;
-        textLines = [];
-        for (const line of allLines) {
-            if (line.length > 0) {
-                count++;
-                if (count > MAX_LINES) break;
-            }
-            textLines.push(line);
-        }
-    } else {
-        textLines = [...allLines];
-    }
-    
-    // If truncated, add ellipsis to last content line
+    // If truncated, add ellipsis to last line
     if (isTruncated && textLines.length > 0) {
-        for (let i = textLines.length - 1; i >= 0; i--) {
-            if (textLines[i].length > 0) {
-                if (textLines[i].length > 40) {
-                    textLines[i] = textLines[i].substring(0, 40) + '...';
-                }
-                break;
-            }
+        const lastLine = textLines[textLines.length - 1];
+        if (lastLine.length > 40) {
+            textLines[textLines.length - 1] = lastLine.substring(0, 40) + '...';
         }
     }
     
     // Calculate dynamic height based on content
     const hasImages = imageSrcs.length > 0;
-    const contentLines = textLines.filter(l => l.length > 0).length;
-    const gapLines = textLines.filter(l => l.length === 0).length;
-    const textAreaHeight = contentLines * LINE_HEIGHT + gapLines * PARAGRAPH_GAP + 40;
+    const lineCount = textLines.length;
+    
+    // Header: emoji + accent line
+    const headerHeight = 120;
+    
+    // Text area: dynamic based on line count
+    const textAreaHeight = lineCount * LINE_HEIGHT + 40;
     
     // "See more" indicator space
     const seeMoreHeight = isTruncated ? 50 : 0;
@@ -1818,11 +1801,11 @@ async function shareAsImage(postId) {
     // Image area: smaller for compact cards, larger for posts with images
     let imageAreaHeight = 0;
     if (hasImages) {
-        imageAreaHeight = contentLines <= 3 ? 350 : 400;
+        imageAreaHeight = lineCount <= 3 ? 350 : 400;
     }
     
     // Footer: compact for short posts
-    const footerHeight = contentLines <= 3 ? 80 : 100;
+    const footerHeight = lineCount <= 3 ? 80 : 100;
     
     // Calculate total height
     let height = headerHeight + textAreaHeight + seeMoreHeight + imageAreaHeight + footerHeight + PADDING;
@@ -1853,7 +1836,7 @@ async function shareAsImage(postId) {
     const moodColors = { blue: '#60a5fa', yellow: '#fbbf24', red: '#f87171' };
     
     // Draw mood indicator (smaller for compact cards)
-    const emojiSize = contentLines <= 3 ? 50 : 60;
+    const emojiSize = lineCount <= 3 ? 50 : 60;
     ctx.font = `${emojiSize}px Arial`;
     ctx.fillText(moodEmojis[mood], PADDING, PADDING + emojiSize - 10);
     
@@ -1862,18 +1845,14 @@ async function shareAsImage(postId) {
     const accentY = PADDING + emojiSize + 10;
     ctx.fillRect(PADDING, accentY, 80, 3);
     
-    // Draw text (with paragraph gaps)
+    // Draw text
     ctx.fillStyle = '#ffffff';
     ctx.font = `${FONT_SIZE}px Georgia, serif`;
     
     let y = accentY + 50;
     for (const line of textLines) {
-        if (line.length === 0) {
-            y += PARAGRAPH_GAP;
-        } else {
-            ctx.fillText(line, PADDING, y);
-            y += LINE_HEIGHT;
-        }
+        ctx.fillText(line, PADDING, y);
+        y += LINE_HEIGHT;
     }
     
     // Draw "See more..." indicator if truncated
@@ -1929,7 +1908,7 @@ async function shareAsImage(postId) {
     }
     
     // Draw footer (compact for short posts)
-    const footerFontSize = contentLines <= 3 ? 22 : 26;
+    const footerFontSize = lineCount <= 3 ? 22 : 26;
     ctx.fillStyle = 'rgba(255,255,255,0.5)';
     ctx.font = `${footerFontSize}px Arial`;
     ctx.fillText('— Aashish Joshi', PADDING, height - footerHeight + 20);
@@ -2013,27 +1992,26 @@ function drawImageCover(ctx, img, x, y, w, h, radius = 0) {
 
 function wrapText(ctx, text, maxWidth, fontSize) {
     ctx.font = `${fontSize}px Georgia, serif`;
+    const words = text.split(' ');
     const lines = [];
-    const paragraphs = text.split(/\n\n+|\n/).map(p => p.trim()).filter(p => p);
+    let currentLine = '';
     
-    for (let i = 0; i < paragraphs.length; i++) {
-        if (i > 0) {
-            lines.push(''); // Empty string = paragraph gap
+    for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const metrics = ctx.measureText(testLine);
+        
+        if (metrics.width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
         }
-        const words = paragraphs[i].split(/\s+/).filter(w => w);
-        let currentLine = '';
-        for (const word of words) {
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
-            const metrics = ctx.measureText(testLine);
-            if (metrics.width > maxWidth && currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
-            } else {
-                currentLine = testLine;
-            }
-        }
-        if (currentLine) lines.push(currentLine);
     }
+    
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+    
     return lines;
 }
 
