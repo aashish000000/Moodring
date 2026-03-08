@@ -1318,6 +1318,7 @@ function showVideoPreview() {
 }
 
 function removeVideo() {
+    const hadVideo = currentPostVideo !== null;
     currentPostVideo = null;
     const preview = document.getElementById('videoPreview');
     if (preview) {
@@ -1326,7 +1327,7 @@ function removeVideo() {
     }
     const input = document.getElementById('videoInput');
     if (input) input.value = '';
-    showToast('Video removed');
+    if (hadVideo) showToast('Video removed');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2457,10 +2458,15 @@ function setupEventListeners() {
     
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        // Skip if typing in any editable element
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
         
-        if (e.key === 'n' && IS_ADMIN) openModal();
-        if (e.key === 't') toggleTheme();
+        // Don't trigger shortcuts if modal is open (except Escape)
+        const modal = document.getElementById('modalOverlay');
+        const modalOpen = modal && modal.style.display !== 'none';
+        
+        if (e.key === 'n' && IS_ADMIN && !modalOpen) openModal();
+        if (e.key === 't' && !modalOpen) toggleTheme();
         if (e.key === 'Escape') {
             closeModal();
             hideLoginModal();
