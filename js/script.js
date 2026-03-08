@@ -2239,7 +2239,11 @@ async function updatePost(postId, text, mood, images = [], audio = null, video =
         saveLocalPosts(localPosts);
         console.log('Post updated locally');
     } else {
-        console.log('⚠️ Post not found in local posts!');
+        // Post doesn't exist locally (only in Supabase) - add it locally to preserve video reference
+        console.log('📹 Post not found locally, adding it with video ref:', updatedData.video);
+        localPosts.unshift({ id: postId, ...updatedData, isSample: false });
+        saveLocalPosts(localPosts);
+        console.log('Post added locally with video reference');
     }
     
     // Update in Supabase
