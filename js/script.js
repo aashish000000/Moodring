@@ -359,7 +359,7 @@ function saveLocalPosts(posts) {
         image: null,
         videoData: null,
         audioData: null,
-        hasMedia: !!(p.images?.length || p.image || p.video || p.audio || p.videoData || p.audioData)
+        hasMedia: !!(p.images?.length || p.image || p.video || p.audio || p.videoData || p.audioData || p.imageRefs?.length)
     }));
     
     try {
@@ -411,15 +411,16 @@ async function getAllPosts() {
     // Create a map of local posts for quick lookup
     const localPostsMap = new Map(localPosts.map(p => [p.id, p]));
     
-    // Merge Supabase posts with local media references (video/audio stored in IndexedDB)
+    // Merge Supabase posts with local media references (video/audio/images stored in IndexedDB)
     const mergedSupabasePosts = supabasePosts.map(sp => {
         const localPost = localPostsMap.get(sp.id);
         if (localPost) {
-            // Preserve local video/audio references that are stored in IndexedDB
+            // Preserve local media references that are stored in IndexedDB
             return {
                 ...sp,
                 video: localPost.video || sp.video,
                 audio: localPost.audio || sp.audio,
+                imageRefs: localPost.imageRefs || sp.imageRefs,
             };
         }
         return sp;
@@ -446,6 +447,24 @@ async function getAllPosts() {
 async function createPost(text, mood, images = [], audio = null, video = null) {
     const now = new Date();
     const postId = 'post-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    
+    // Store images in IndexedDB as fallback (in case Supabase sync fails)
+    let imageRefs = [];
+    if (images && images.length > 0) {
+        for (let i = 0; i < images.length; i++) {
+            const img = images[i];
+            if (img && img.startsWith('data:')) {
+                const imageId = `image-${postId}-${i}`;
+                try {
+                    await saveMediaToIDB(imageId, img, 'image');
+                    imageRefs.push(imageId);
+                    console.log('Image saved to IndexedDB:', imageId);
+                } catch (e) {
+                    console.error('Failed to save image to IndexedDB:', e);
+                }
+            }
+        }
+    }
     
     // Store video in IndexedDB if present (too large for localStorage/Supabase)
     let videoRef = null;
@@ -481,6 +500,7 @@ async function createPost(text, mood, images = [], audio = null, video = null) {
         timestamp: now.getTime(),
         images: images.length > 0 ? images : null,
         image: images.length === 1 ? images[0] : null,
+        imageRefs: imageRefs.length > 0 ? imageRefs : null,
         audio: audioRef,
         video: videoRef,
         videoData: video,
@@ -767,6 +787,33 @@ async function loadMediaFromIDB() {
         const loadingEl = container.querySelector('.media-loading');
         if (loadingEl) loadingEl.remove();
     }
+
+    // Load images from IndexedDB
+    const imageItems = document.querySelectorAll('[data-image-ref]');
+    console.log('Loading images from IndexedDB. Image items found:', imageItems.length);
+    
+    for (const item of imageItems) {
+        const imageRef = item.getAttribute('data-image-ref');
+        if (imageRef && imageRef.startsWith('image-')) {
+            try {
+                const imageData = await getMediaFromIDB(imageRef);
+                if (imageData) {
+                    const imgEl = item.querySelector('img');
+                    if (imgEl) {
+                        imgEl.src = imageData;
+                        imgEl.style.minHeight = '';
+                        imgEl.style.background = '';
+                        // Add click handler for image viewer
+                        item.onclick = () => openImageViewer(imageData);
+                    }
+                } else {
+                    console.warn('No image data found in IndexedDB for ref:', imageRef);
+                }
+            } catch (e) {
+                console.error('Failed to load image from IndexedDB:', e);
+            }
+        }
+    }
 }
 
 async function updateReactionsSummary(postId) {
@@ -826,21 +873,41 @@ async function highlightCurrentReaction(postId) {
 
 function renderPostGallery(post) {
     const images = post.images || (post.image ? [post.image] : []);
-    if (images.length === 0) return '';
+    const imageRefs = post.imageRefs || [];
     
-    const count = images.length;
-    const gridClass = `post-gallery gallery-${Math.min(count, 4)}`;
+    // If we have actual images, render them directly
+    if (images.length > 0) {
+        const count = images.length;
+        const gridClass = `post-gallery gallery-${Math.min(count, 4)}`;
+        return `
+            <div class="${gridClass}">
+                ${images.slice(0, 4).map((src, i) => `
+                    <div class="gallery-item" onclick="openImageViewer('${src}')">
+                        <img src="${src}" alt="Photo ${i + 1}" loading="lazy">
+                        ${count > 4 && i === 3 ? `<div class="gallery-more">+${count - 4}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
     
-    return `
-        <div class="${gridClass}">
-            ${images.slice(0, 4).map((src, i) => `
-                <div class="gallery-item" onclick="openImageViewer('${src}')">
-                    <img src="${src}" alt="Photo ${i + 1}" loading="lazy">
-                    ${count > 4 && i === 3 ? `<div class="gallery-more">+${count - 4}</div>` : ''}
-                </div>
-            `).join('')}
-        </div>
-    `;
+    // If we have image refs (stored in IndexedDB), render placeholders that will be loaded later
+    if (imageRefs.length > 0) {
+        const count = imageRefs.length;
+        const gridClass = `post-gallery gallery-${Math.min(count, 4)}`;
+        return `
+            <div class="${gridClass}" data-image-refs="${imageRefs.join(',')}">
+                ${imageRefs.slice(0, 4).map((ref, i) => `
+                    <div class="gallery-item" data-image-ref="${ref}">
+                        <img src="" alt="Photo ${i + 1}" loading="lazy" style="min-height: 100px; background: var(--bg-secondary);">
+                        ${count > 4 && i === 3 ? `<div class="gallery-more">+${count - 4}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    return '';
 }
 
 function openImageViewer(src) {
