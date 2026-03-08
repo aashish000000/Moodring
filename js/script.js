@@ -92,6 +92,7 @@ let currentFilter = 'all';
 let searchQuery = '';
 let selectedMood = null;
 let currentPostImages = [];
+let currentPostVideo = null;
 let currentPostAudio = null;
 let editingPostId = null; // Track if we're editing a post
 
@@ -369,7 +370,7 @@ async function getAllPosts() {
     return dedupedPosts.sort((a, b) => b.timestamp - a.timestamp);
 }
 
-async function createPost(text, mood, images = [], audio = null) {
+async function createPost(text, mood, images = [], audio = null, video = null) {
     const now = new Date();
     const newPost = {
         id: 'post-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
@@ -380,6 +381,7 @@ async function createPost(text, mood, images = [], audio = null) {
         images: images.length > 0 ? images : null,
         image: images.length === 1 ? images[0] : null,
         audio,
+        video,
     };
     
     console.log('Creating new post:', newPost.id);
@@ -719,6 +721,7 @@ function renderPostCard(post) {
             <div class="post-content">${parseMarkdown(post.text)}</div>
             
             ${renderPostGallery(post)}
+            ${post.video ? `<div class="post-video"><video controls src="${post.video}" style="max-width: 100%; border-radius: 8px;"></video></div>` : ''}
             ${post.audio ? `<div class="post-audio"><audio controls src="${post.audio}"></audio></div>` : ''}
             
             <div class="post-footer">
@@ -910,8 +913,10 @@ function openModal(preselectedMood = null) {
     moodOptions.forEach(o => o.classList.remove('selected'));
     selectedMood = null;
     currentPostImages = [];
+    currentPostVideo = null;
     currentPostAudio = null;
     removeImage();
+    removeVideo();
     removeAudio();
 
     if (preselectedMood) {
@@ -1124,6 +1129,71 @@ function removeImage(index) {
     }
     const input = document.getElementById('imageInput');
     if (input) input.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VIDEO UPLOAD
+// ═══════════════════════════════════════════════════════════════
+function handleVideoUpload(files) {
+    if (!files || files.length === 0) {
+        showToast('Please select a video');
+        return;
+    }
+
+    const file = files[0];
+    
+    if (!file.type.startsWith('video/')) {
+        showToast('Please select a video file');
+        return;
+    }
+    
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showToast('Video must be under 50MB');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        currentPostVideo = e.target.result;
+        showVideoPreview();
+        showToast('Video added');
+    };
+    reader.onerror = () => {
+        showToast('Failed to load video');
+    };
+    reader.readAsDataURL(file);
+}
+
+function showVideoPreview() {
+    const preview = document.getElementById('videoPreview');
+    if (!preview) return;
+    
+    if (!currentPostVideo) {
+        preview.innerHTML = '';
+        preview.style.display = 'none';
+        return;
+    }
+    
+    preview.innerHTML = `
+        <div class="video-preview-container">
+            <video src="${currentPostVideo}" controls style="max-width: 100%; max-height: 200px; border-radius: 8px;"></video>
+            <button type="button" class="remove-video-btn" onclick="removeVideo()">×</button>
+        </div>
+    `;
+    preview.style.display = 'block';
+}
+
+function removeVideo() {
+    currentPostVideo = null;
+    const preview = document.getElementById('videoPreview');
+    if (preview) {
+        preview.innerHTML = '';
+        preview.style.display = 'none';
+    }
+    const input = document.getElementById('videoInput');
+    if (input) input.value = '';
+    showToast('Video removed');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1819,6 +1889,12 @@ function openModalForEdit(post) {
         showAudioPreview();
     }
     
+    // Load video
+    currentPostVideo = post.video || null;
+    if (currentPostVideo) {
+        showVideoPreview();
+    }
+    
     // Update button text
     if (submitBtn) {
         submitBtn.disabled = false;
@@ -1829,13 +1905,14 @@ function openModalForEdit(post) {
     if (thoughtInput) setTimeout(() => thoughtInput.focus(), 250);
 }
 
-async function updatePost(postId, text, mood, images = [], audio = null) {
+async function updatePost(postId, text, mood, images = [], audio = null, video = null) {
     const updatedData = {
         text: text.trim(),
         mood,
         images: images.length > 0 ? images : null,
         image: images.length >= 1 ? images[0] : null,
-        audio
+        audio,
+        video
     };
     
     console.log('Updating post:', postId);
@@ -1992,7 +2069,11 @@ function setupEventListeners() {
         if (charCount) charCount.textContent = thoughtInput.value.length;
         if (readingTimePreview) readingTimePreview.textContent = calculateReadingTime(thoughtInput.value);
         validateForm();
+        updateToolbarActiveState();
     });
+    
+    thoughtInput?.addEventListener('keyup', updateToolbarActiveState);
+    thoughtInput?.addEventListener('click', updateToolbarActiveState);
     
     async function handlePublish() {
         console.log('Publishing/Updating...');
@@ -2022,11 +2103,11 @@ function setupEventListeners() {
         try {
             if (isEditing) {
                 console.log('Updating post:', editingPostId);
-                await updatePost(editingPostId, thoughtInput.value, selectedMood, currentPostImages, currentPostAudio);
+                await updatePost(editingPostId, thoughtInput.value, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
                 showToast('Post updated!');
             } else {
                 console.log('Creating post...');
-                await createPost(thoughtInput.value, selectedMood, currentPostImages, currentPostAudio);
+                await createPost(thoughtInput.value, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
                 showToast('Post published!');
             }
             closeModal();
@@ -2251,21 +2332,50 @@ function insertFormat(format) {
     const selected = text.substring(start, end);
     
     const formats = {
-        bold: { before: '**', after: '**', placeholder: 'bold text' },
-        italic: { before: '*', after: '*', placeholder: 'italic text' },
-        underline: { before: '<u>', after: '</u>', placeholder: 'underlined' },
-        bullet: { before: '\n- ', after: '', placeholder: 'list item' },
-        number: { before: '\n1. ', after: '', placeholder: 'list item' },
-        quote: { before: '\n> ', after: '', placeholder: 'quote' },
+        bold: { before: '**', after: '**' },
+        italic: { before: '*', after: '*' },
+        underline: { before: '<u>', after: '</u>' },
+        bullet: { before: '\n- ', after: '' },
+        number: { before: '\n1. ', after: '' },
+        quote: { before: '\n> ', after: '' },
     };
     
     const f = formats[format];
     if (!f) return;
     
-    const insertion = selected || f.placeholder;
-    textarea.value = text.substring(0, start) + f.before + insertion + f.after + text.substring(end);
-    textarea.focus();
+    if (selected) {
+        textarea.value = text.substring(0, start) + f.before + selected + f.after + text.substring(end);
+        textarea.focus();
+        textarea.setSelectionRange(start + f.before.length, start + f.before.length + selected.length);
+    } else {
+        textarea.value = text.substring(0, start) + f.before + f.after + text.substring(end);
+        textarea.focus();
+        textarea.setSelectionRange(start + f.before.length, start + f.before.length);
+    }
     textarea.dispatchEvent(new Event('input'));
+    
+    updateToolbarActiveState();
+}
+
+function updateToolbarActiveState() {
+    const textarea = document.getElementById('thoughtInput');
+    if (!textarea) return;
+    
+    const pos = textarea.selectionStart;
+    const text = textarea.value;
+    const before = text.substring(0, pos);
+    
+    const boldBtn = document.querySelector('.toolbar-btn[data-format="bold"]');
+    const italicBtn = document.querySelector('.toolbar-btn[data-format="italic"]');
+    const underlineBtn = document.querySelector('.toolbar-btn[data-format="underline"]');
+    
+    const inBold = (before.split('**').length - 1) % 2 === 1;
+    const inItalic = (before.split(/(?<!\*)\*(?!\*)/).length - 1) % 2 === 1;
+    const inUnderline = (before.split('<u>').length - before.split('</u>').length) > 0;
+    
+    if (boldBtn) boldBtn.classList.toggle('active', inBold);
+    if (italicBtn) italicBtn.classList.toggle('active', inItalic);
+    if (underlineBtn) underlineBtn.classList.toggle('active', inUnderline);
 }
 
 // Make functions globally available
@@ -2283,8 +2393,10 @@ window.shareViaEmail = shareViaEmail;
 window.nativeShare = nativeShare;
 window.copyToClipboard = copyToClipboard;
 window.removeImage = removeImage;
+window.removeVideo = removeVideo;
 window.removeAudio = removeAudio;
 window.handleImageUpload = handleImageUpload;
+window.handleVideoUpload = handleVideoUpload;
 window.toggleVoice = toggleVoice;
 window.toggleAudioRecording = toggleAudioRecording;
 window.saveDraft = saveDraft;

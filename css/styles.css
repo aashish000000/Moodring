@@ -1316,6 +1316,8 @@ body {
     border: 1px solid var(--border-color);
     border-bottom: none;
     border-radius: var(--radius-md) var(--radius-md) 0 0;
+    flex-wrap: wrap;
+    overflow: hidden;
 }
 
 .toolbar-btn {
@@ -1361,6 +1363,26 @@ body {
     background: var(--accent-red-bg);
     color: var(--accent-red);
     animation: pulse-voice 1s ease-in-out infinite;
+}
+
+.toolbar-btn.active {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+}
+
+.toolbar-btn.recording {
+    background: #ff4444;
+    color: white;
+    animation: pulse-record 1s ease-in-out infinite;
+}
+
+@keyframes pulse-record {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+label.toolbar-btn {
+    flex-shrink: 0;
 }
 
 @keyframes pulse-voice {
@@ -1710,6 +1732,58 @@ body {
 
 .remove-audio:hover {
     background: var(--text-primary);
+}
+
+/* Post Video */
+.post-video {
+    margin-top: 1rem;
+}
+
+.post-video video {
+    width: 100%;
+    max-height: 400px;
+    border-radius: var(--radius-md);
+    background: #000;
+}
+
+/* Video Preview in Form */
+.video-preview {
+    margin-top: 0.75rem;
+}
+
+.video-preview-container {
+    position: relative;
+    display: inline-block;
+}
+
+.video-preview video {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: var(--radius-md);
+    background: #000;
+}
+
+.remove-video-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: background 0.2s ease;
+}
+
+.remove-video-btn:hover {
+    background: rgba(255, 0, 0, 0.8);
 }
 
 /* Recording Button State */
