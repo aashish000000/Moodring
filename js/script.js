@@ -2117,33 +2117,33 @@ async function handleEdit(postId) {
     }
     
     // Open modal in edit mode
-    openModalForEdit(post);
+    await openModalForEdit(post);
 }
 
-function openModalForEdit(post) {
+async function openModalForEdit(post) {
     if (!IS_ADMIN) {
         showToast('Only Aashish can edit posts');
         return;
     }
-    
+
     editingPostId = post.id;
-    
+
     const modalOverlay = document.getElementById('modalOverlay');
     const thoughtInput = document.getElementById('thoughtInput');
     const charCount = document.getElementById('charCount');
     const moodOptions = document.querySelectorAll('.mood-option');
     const submitBtn = document.getElementById('submitBtn');
     const modalTitle = document.querySelector('.modal-header h2');
-    
+
     // Set title to "Edit Post"
     if (modalTitle) modalTitle.textContent = 'Edit Post';
-    
+
     // Fill in the existing content
     if (thoughtInput) {
         thoughtInput.innerHTML = post.text;
         if (charCount) charCount.textContent = thoughtInput.innerText.length;
     }
-    
+
     // Select the mood
     moodOptions.forEach(o => o.classList.remove('selected'));
     const moodBtn = document.querySelector(`.mood-option.${post.mood}`);
@@ -2151,8 +2151,8 @@ function openModalForEdit(post) {
         moodBtn.classList.add('selected');
         selectedMood = post.mood;
     }
-    
-    // Load images
+
+    // Load images - check if they're IndexedDB references
     currentPostImages = [];
     if (post.images && post.images.length > 0) {
         currentPostImages = [...post.images];
@@ -2160,16 +2160,49 @@ function openModalForEdit(post) {
     } else if (post.image) {
         currentPostImages = [post.image];
         showImagePreview();
+    } else if (post.imageRefs && post.imageRefs.length > 0) {
+        // Load images from IndexedDB
+        for (const ref of post.imageRefs) {
+            try {
+                const imageData = await getMediaFromIDB(ref);
+                if (imageData) currentPostImages.push(imageData);
+            } catch (e) {
+                console.error('Failed to load image from IndexedDB:', e);
+            }
+        }
+        if (currentPostImages.length > 0) showImagePreview();
     }
-    
-    // Load audio
-    currentPostAudio = post.audio || null;
+
+    // Load audio - check if it's an IndexedDB reference
+    currentPostAudio = null;
+    if (post.audio && post.audio.startsWith('audio-')) {
+        // Load audio from IndexedDB
+        try {
+            currentPostAudio = await getMediaFromIDB(post.audio);
+            console.log('📹 Loaded audio from IndexedDB:', post.audio);
+        } catch (e) {
+            console.error('Failed to load audio from IndexedDB:', e);
+        }
+    } else if (post.audio) {
+        currentPostAudio = post.audio;
+    }
     if (currentPostAudio) {
         showAudioPreview();
     }
     
-    // Load video
-    currentPostVideo = post.video || null;
+    // Load video - check if it's an IndexedDB reference
+    currentPostVideo = null;
+    if (post.video && post.video.startsWith('video-')) {
+        // Load video from IndexedDB
+        try {
+            currentPostVideo = await getMediaFromIDB(post.video);
+            console.log('📹 Loaded video from IndexedDB:', post.video, currentPostVideo ? 'Success' : 'Not found');
+        } catch (e) {
+            console.error('Failed to load video from IndexedDB:', e);
+        }
+    } else if (post.video) {
+        currentPostVideo = post.video;
+    }
     if (currentPostVideo) {
         showVideoPreview();
     }
