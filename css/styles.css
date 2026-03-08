@@ -2081,10 +2081,12 @@ label.toolbar-btn {
     margin-top: 0.75rem;
 }
 
-/* Text Input */
+/* Text Input (Rich Text Editor) */
 .thought-input {
     width: 100%;
     min-height: 180px;
+    max-height: 400px;
+    overflow-y: auto;
     padding: 1rem;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
@@ -2093,8 +2095,8 @@ label.toolbar-btn {
     font-family: 'Crimson Pro', Georgia, serif;
     font-size: 1.1rem;
     line-height: 1.75;
-    resize: vertical;
     transition: all 0.2s ease;
+    cursor: text;
 }
 
 .thought-input:focus {
@@ -2102,8 +2104,39 @@ label.toolbar-btn {
     border-color: var(--text-muted);
 }
 
-.thought-input::placeholder {
+.thought-input:empty::before {
+    content: attr(data-placeholder);
     color: var(--text-muted);
+    pointer-events: none;
+}
+
+.thought-input b, .thought-input strong {
+    font-weight: 700;
+}
+
+.thought-input i, .thought-input em {
+    font-style: italic;
+}
+
+.thought-input u {
+    text-decoration: underline;
+}
+
+.thought-input blockquote {
+    border-left: 3px solid var(--text-muted);
+    padding-left: 1rem;
+    margin: 0.5rem 0;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.thought-input ul, .thought-input ol {
+    padding-left: 1.5rem;
+    margin: 0.5rem 0;
+}
+
+.thought-input li {
+    margin: 0.25rem 0;
 }
 
 .input-meta {

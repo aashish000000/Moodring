@@ -907,7 +907,7 @@ function openModal(preselectedMood = null) {
     if (modalTitle) modalTitle.textContent = 'New Post';
     if (submitBtn) submitBtn.textContent = 'Publish';
 
-    if (thoughtInput) thoughtInput.value = '';
+    if (thoughtInput) thoughtInput.innerHTML = '';
     if (charCount) charCount.textContent = '0';
 
     moodOptions.forEach(o => o.classList.remove('selected'));
@@ -942,8 +942,8 @@ function closeModal() {
 function validateForm() {
     const thoughtInput = document.getElementById('thoughtInput');
     const submitBtn = document.getElementById('submitBtn');
-    
-    const hasText = thoughtInput && thoughtInput.value.trim().length > 0;
+
+    const hasText = thoughtInput && thoughtInput.innerText.trim().length > 0;
     const hasMood = selectedMood !== null;
     
     if (submitBtn) {
@@ -1325,9 +1325,8 @@ function startVoiceRecognition() {
         
         const thoughtInput = document.getElementById('thoughtInput');
         if (thoughtInput && transcript) {
-            const cursorPos = thoughtInput.selectionStart;
-            const text = thoughtInput.value;
-            thoughtInput.value = text.substring(0, cursorPos) + transcript + text.substring(cursorPos);
+            thoughtInput.focus();
+            document.execCommand('insertText', false, transcript);
             thoughtInput.dispatchEvent(new Event('input'));
         }
     };
@@ -1357,9 +1356,9 @@ function stopVoiceRecognition() {
 function saveDraft() {
     const thoughtInput = document.getElementById('thoughtInput');
     if (!thoughtInput) return;
-    
+
     const draft = {
-        text: thoughtInput.value,
+        text: thoughtInput.innerHTML,
         mood: selectedMood,
         images: currentPostImages,
         savedAt: new Date().toISOString()
@@ -1378,8 +1377,8 @@ function restoreDraft() {
         const charCount = document.getElementById('charCount');
         
         if (thoughtInput && draft.text) {
-            thoughtInput.value = draft.text;
-            if (charCount) charCount.textContent = draft.text.length;
+            thoughtInput.innerHTML = draft.text;
+            if (charCount) charCount.textContent = thoughtInput.innerText.length;
         }
         
         if (draft.mood) {
@@ -1861,8 +1860,8 @@ function openModalForEdit(post) {
     
     // Fill in the existing content
     if (thoughtInput) {
-        thoughtInput.value = post.text;
-        if (charCount) charCount.textContent = post.text.length;
+        thoughtInput.innerHTML = post.text;
+        if (charCount) charCount.textContent = thoughtInput.innerText.length;
     }
     
     // Select the mood
@@ -2066,8 +2065,8 @@ function setupEventListeners() {
     const readingTimePreview = document.getElementById('readingTimePreview');
     
     thoughtInput?.addEventListener('input', () => {
-        if (charCount) charCount.textContent = thoughtInput.value.length;
-        if (readingTimePreview) readingTimePreview.textContent = calculateReadingTime(thoughtInput.value);
+        if (charCount) charCount.textContent = thoughtInput.innerText.length;
+        if (readingTimePreview) readingTimePreview.textContent = calculateReadingTime(thoughtInput.innerText);
         validateForm();
         updateToolbarActiveState();
     });
@@ -2079,7 +2078,7 @@ function setupEventListeners() {
         console.log('Publishing/Updating...');
         console.log('editingPostId:', editingPostId);
         console.log('selectedMood:', selectedMood);
-        console.log('thoughtInput value:', thoughtInput?.value);
+        console.log('thoughtInput content:', thoughtInput?.innerHTML);
         console.log('IS_ADMIN:', IS_ADMIN);
 
         if (!selectedMood) {
@@ -2087,7 +2086,7 @@ function setupEventListeners() {
             return;
         }
 
-        if (!thoughtInput?.value.trim()) {
+        if (!thoughtInput?.innerText.trim()) {
             showToast('Please write something first');
             return;
         }
@@ -2103,11 +2102,11 @@ function setupEventListeners() {
         try {
             if (isEditing) {
                 console.log('Updating post:', editingPostId);
-                await updatePost(editingPostId, thoughtInput.value, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
+                await updatePost(editingPostId, thoughtInput.innerHTML, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
                 showToast('Post updated!');
             } else {
                 console.log('Creating post...');
-                await createPost(thoughtInput.value, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
+                await createPost(thoughtInput.innerHTML, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
                 showToast('Post published!');
             }
             closeModal();
@@ -2323,59 +2322,37 @@ function setupEventListeners() {
 }
 
 function insertFormat(format) {
-    const textarea = document.getElementById('thoughtInput');
-    if (!textarea) return;
+    const editor = document.getElementById('thoughtInput');
+    if (!editor) return;
     
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selected = text.substring(start, end);
+    editor.focus();
     
-    const formats = {
-        bold: { before: '**', after: '**' },
-        italic: { before: '*', after: '*' },
-        underline: { before: '<u>', after: '</u>' },
-        bullet: { before: '\n- ', after: '' },
-        number: { before: '\n1. ', after: '' },
-        quote: { before: '\n> ', after: '' },
+    const commands = {
+        bold: 'bold',
+        italic: 'italic',
+        underline: 'underline',
+        bullet: 'insertUnorderedList',
+        number: 'insertOrderedList',
     };
     
-    const f = formats[format];
-    if (!f) return;
-    
-    if (selected) {
-        textarea.value = text.substring(0, start) + f.before + selected + f.after + text.substring(end);
-        textarea.focus();
-        textarea.setSelectionRange(start + f.before.length, start + f.before.length + selected.length);
-    } else {
-        textarea.value = text.substring(0, start) + f.before + f.after + text.substring(end);
-        textarea.focus();
-        textarea.setSelectionRange(start + f.before.length, start + f.before.length);
+    if (format === 'quote') {
+        document.execCommand('formatBlock', false, 'blockquote');
+    } else if (commands[format]) {
+        document.execCommand(commands[format], false, null);
     }
-    textarea.dispatchEvent(new Event('input'));
     
+    editor.dispatchEvent(new Event('input'));
     updateToolbarActiveState();
 }
 
 function updateToolbarActiveState() {
-    const textarea = document.getElementById('thoughtInput');
-    if (!textarea) return;
-    
-    const pos = textarea.selectionStart;
-    const text = textarea.value;
-    const before = text.substring(0, pos);
-    
     const boldBtn = document.querySelector('.toolbar-btn[data-format="bold"]');
     const italicBtn = document.querySelector('.toolbar-btn[data-format="italic"]');
     const underlineBtn = document.querySelector('.toolbar-btn[data-format="underline"]');
     
-    const inBold = (before.split('**').length - 1) % 2 === 1;
-    const inItalic = (before.split(/(?<!\*)\*(?!\*)/).length - 1) % 2 === 1;
-    const inUnderline = (before.split('<u>').length - before.split('</u>').length) > 0;
-    
-    if (boldBtn) boldBtn.classList.toggle('active', inBold);
-    if (italicBtn) italicBtn.classList.toggle('active', inItalic);
-    if (underlineBtn) underlineBtn.classList.toggle('active', inUnderline);
+    if (boldBtn) boldBtn.classList.toggle('active', document.queryCommandState('bold'));
+    if (italicBtn) italicBtn.classList.toggle('active', document.queryCommandState('italic'));
+    if (underlineBtn) underlineBtn.classList.toggle('active', document.queryCommandState('underline'));
 }
 
 // Make functions globally available
