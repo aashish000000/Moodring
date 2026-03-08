@@ -21,8 +21,64 @@ const CONFIG = {
     THEME_KEY: 'moodring_theme',
     STREAK_KEY: 'moodring_streak',
     DRAFT_KEY: 'moodring_draft',
+    MEDIA_DB: 'moodring_media',
     WORDS_PER_MINUTE: 200,
 };
+
+// ═══════════════════════════════════════════════════════════════
+// INDEXEDDB MEDIA STORAGE (for large files like videos)
+// ═══════════════════════════════════════════════════════════════
+let mediaDB = null;
+
+async function initMediaDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(CONFIG.MEDIA_DB, 1);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            mediaDB = request.result;
+            resolve(mediaDB);
+        };
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('media')) {
+                db.createObjectStore('media', { keyPath: 'id' });
+            }
+        };
+    });
+}
+
+async function saveMediaToIDB(id, data, type) {
+    if (!mediaDB) await initMediaDB();
+    return new Promise((resolve, reject) => {
+        const transaction = mediaDB.transaction(['media'], 'readwrite');
+        const store = transaction.objectStore('media');
+        const request = store.put({ id, data, type, timestamp: Date.now() });
+        request.onsuccess = () => resolve(id);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getMediaFromIDB(id) {
+    if (!mediaDB) await initMediaDB();
+    return new Promise((resolve, reject) => {
+        const transaction = mediaDB.transaction(['media'], 'readonly');
+        const store = transaction.objectStore('media');
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result?.data || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function deleteMediaFromIDB(id) {
+    if (!mediaDB) await initMediaDB();
+    return new Promise((resolve, reject) => {
+        const transaction = mediaDB.transaction(['media'], 'readwrite');
+        const store = transaction.objectStore('media');
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // FALLBACK DATA
@@ -296,14 +352,14 @@ function getLocalPosts() {
 }
 
 function saveLocalPosts(posts) {
-    // Strip media from local storage to save space - media is stored in cloud
+    // Strip actual media data but keep references (IDs) for IndexedDB lookup
     const lightPosts = posts.map(p => ({
         ...p,
         images: null,
         image: null,
-        video: null,
-        audio: null,
-        hasMedia: !!(p.images?.length || p.image || p.video || p.audio)
+        videoData: null,
+        audioData: null,
+        hasMedia: !!(p.images?.length || p.image || p.video || p.audio || p.videoData || p.audioData)
     }));
     
     try {
@@ -372,16 +428,46 @@ async function getAllPosts() {
 
 async function createPost(text, mood, images = [], audio = null, video = null) {
     const now = new Date();
+    const postId = 'post-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    
+    // Store video in IndexedDB if present (too large for localStorage/Supabase)
+    let videoRef = null;
+    if (video && video.startsWith('data:')) {
+        const videoId = 'video-' + postId;
+        try {
+            await saveMediaToIDB(videoId, video, 'video');
+            videoRef = videoId;
+            console.log('Video saved to IndexedDB:', videoId);
+        } catch (e) {
+            console.error('Failed to save video to IndexedDB:', e);
+        }
+    }
+    
+    // Store audio in IndexedDB if present
+    let audioRef = null;
+    if (audio && audio.startsWith('data:')) {
+        const audioId = 'audio-' + postId;
+        try {
+            await saveMediaToIDB(audioId, audio, 'audio');
+            audioRef = audioId;
+            console.log('Audio saved to IndexedDB:', audioId);
+        } catch (e) {
+            console.error('Failed to save audio to IndexedDB:', e);
+        }
+    }
+    
     const newPost = {
-        id: 'post-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
+        id: postId,
         text: text.trim(),
         mood,
         date: now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
         timestamp: now.getTime(),
         images: images.length > 0 ? images : null,
         image: images.length === 1 ? images[0] : null,
-        audio,
-        video,
+        audio: audioRef,
+        video: videoRef,
+        videoData: video,
+        audioData: audio,
     };
     
     console.log('Creating new post:', newPost.id);
@@ -600,9 +686,56 @@ async function renderPosts() {
     
     postsList.innerHTML = posts.map(post => renderPostCard(post)).join('');
 
+    // Load media from IndexedDB
+    await loadMediaFromIDB();
+
     // Load reactions
     for (const post of posts) {
         await updateReactionsSummary(post.id);
+    }
+}
+
+async function loadMediaFromIDB() {
+    // Load videos
+    const videoContainers = document.querySelectorAll('[data-video-ref]');
+    for (const container of videoContainers) {
+        const videoRef = container.getAttribute('data-video-ref');
+        if (videoRef && videoRef.startsWith('video-')) {
+            try {
+                const videoData = await getMediaFromIDB(videoRef);
+                if (videoData) {
+                    const videoEl = container.querySelector('video');
+                    if (videoEl) {
+                        videoEl.src = videoData;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load video from IndexedDB:', e);
+            }
+        }
+        const loadingEl = container.querySelector('.media-loading');
+        if (loadingEl) loadingEl.remove();
+    }
+
+    // Load audio
+    const audioContainers = document.querySelectorAll('[data-audio-ref]');
+    for (const container of audioContainers) {
+        const audioRef = container.getAttribute('data-audio-ref');
+        if (audioRef && audioRef.startsWith('audio-')) {
+            try {
+                const audioData = await getMediaFromIDB(audioRef);
+                if (audioData) {
+                    const audioEl = container.querySelector('audio');
+                    if (audioEl) {
+                        audioEl.src = audioData;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load audio from IndexedDB:', e);
+            }
+        }
+        const loadingEl = container.querySelector('.media-loading');
+        if (loadingEl) loadingEl.remove();
     }
 }
 
@@ -721,8 +854,8 @@ function renderPostCard(post) {
             <div class="post-content">${parseMarkdown(post.text)}</div>
             
             ${renderPostGallery(post)}
-            ${post.video ? `<div class="post-video"><video controls src="${post.video}" style="max-width: 100%; border-radius: 8px;"></video></div>` : ''}
-            ${post.audio ? `<div class="post-audio"><audio controls src="${post.audio}"></audio></div>` : ''}
+            ${post.video ? `<div class="post-video" data-video-ref="${post.video}"><video controls style="max-width: 100%; border-radius: 8px;"></video><span class="media-loading">Loading video...</span></div>` : ''}
+            ${post.audio ? `<div class="post-audio" data-audio-ref="${post.audio}"><audio controls></audio><span class="media-loading">Loading audio...</span></div>` : ''}
             
             <div class="post-footer">
                 <div class="reactions-wrapper">
@@ -1903,13 +2036,41 @@ function openModalForEdit(post) {
 }
 
 async function updatePost(postId, text, mood, images = [], audio = null, video = null) {
+    // Store video in IndexedDB if present
+    let videoRef = null;
+    if (video && video.startsWith('data:')) {
+        const videoId = 'video-' + postId;
+        try {
+            await saveMediaToIDB(videoId, video, 'video');
+            videoRef = videoId;
+            console.log('Video saved to IndexedDB:', videoId);
+        } catch (e) {
+            console.error('Failed to save video to IndexedDB:', e);
+        }
+    }
+    
+    // Store audio in IndexedDB if present
+    let audioRef = null;
+    if (audio && audio.startsWith('data:')) {
+        const audioId = 'audio-' + postId;
+        try {
+            await saveMediaToIDB(audioId, audio, 'audio');
+            audioRef = audioId;
+            console.log('Audio saved to IndexedDB:', audioId);
+        } catch (e) {
+            console.error('Failed to save audio to IndexedDB:', e);
+        }
+    }
+    
     const updatedData = {
         text: text.trim(),
         mood,
         images: images.length > 0 ? images : null,
         image: images.length >= 1 ? images[0] : null,
-        audio,
-        video
+        audio: audioRef,
+        video: videoRef,
+        videoData: video,
+        audioData: audio,
     };
     
     console.log('Updating post:', postId);
@@ -2384,6 +2545,7 @@ window.syncAllPostsToCloud = syncAllPostsToCloud;
 async function init() {
     initTheme();
     initSupabase();
+    await initMediaDB();
     
     await checkAuth();
     
