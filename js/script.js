@@ -296,27 +296,27 @@ function getLocalPosts() {
 }
 
 function saveLocalPosts(posts) {
+    // Strip media from local storage to save space - media is stored in cloud
+    const lightPosts = posts.map(p => ({
+        ...p,
+        images: null,
+        image: null,
+        video: null,
+        audio: null,
+        hasMedia: !!(p.images?.length || p.image || p.video || p.audio)
+    }));
+    
     try {
-        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(posts));
+        localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(lightPosts));
     } catch (e) {
         if (e.name === 'QuotaExceededError' || e.message.includes('quota')) {
-            console.error('Storage quota exceeded, clearing old posts...');
-            // Keep only the 10 most recent posts
-            const trimmedPosts = posts.slice(0, 10);
-            // Remove images from older posts to save space
-            const lighterPosts = trimmedPosts.map((p, i) => {
-                if (i > 5) {
-                    return { ...p, images: null, image: null, audio: null };
-                }
-                return p;
-            });
+            console.error('Storage quota exceeded, keeping recent posts only...');
+            const trimmedPosts = lightPosts.slice(0, 20);
             try {
-                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(lighterPosts));
-                showToast('Storage full - some old images removed');
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(trimmedPosts));
             } catch (e2) {
-                // Last resort: clear everything except the newest post
-                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify([posts[0]]));
-                showToast('Storage full - only newest post kept');
+                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify([lightPosts[0]]));
+                showToast('Storage full - only newest post kept locally');
             }
         } else {
             throw e;
@@ -1360,11 +1360,12 @@ function saveDraft() {
     const draft = {
         text: thoughtInput.innerHTML,
         mood: selectedMood,
-        images: currentPostImages,
+        imageCount: currentPostImages.length,
+        hasVideo: !!currentPostVideo,
         savedAt: new Date().toISOString()
     };
     localStorage.setItem(CONFIG.DRAFT_KEY, JSON.stringify(draft));
-    showToast('Draft saved');
+    showToast('Draft saved (re-add images after restore)');
 }
 
 function restoreDraft() {
@@ -1390,16 +1391,13 @@ function restoreDraft() {
             }
         }
         
-        if (draft.images && draft.images.length > 0) {
-            currentPostImages = draft.images;
-            showImagePreview();
-        } else if (draft.image) {
-            currentPostImages = [draft.image];
-            showImagePreview();
-        }
-        
         validateForm();
-        showToast('Draft restored');
+        
+        let msg = 'Draft restored';
+        if (draft.imageCount > 0 || draft.hasVideo) {
+            msg += ' - please re-add your media';
+        }
+        showToast(msg);
     } catch (e) {}
 }
 
