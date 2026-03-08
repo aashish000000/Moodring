@@ -912,6 +912,11 @@ body {
     height: 16px;
 }
 
+/* Share Actions Container */
+.share-actions {
+    position: relative;
+}
+
 /* Share Menu */
 .share-menu {
     position: absolute;
