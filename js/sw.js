@@ -1,5 +1,5 @@
 // Service Worker for PWA
-const CACHE_NAME = 'moodring-v1';
+const CACHE_NAME = 'moodring-v2';
 const urlsToCache = [
     '/',
     '/index.html',
