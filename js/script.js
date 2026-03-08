@@ -2417,6 +2417,9 @@ function setupEventListeners() {
         try {
             if (isEditing) {
                 console.log('Updating post:', editingPostId);
+                console.log('📹 currentPostVideo:', currentPostVideo ? 'Present (' + currentPostVideo.length + ' chars)' : 'NULL');
+                console.log('📷 currentPostImages:', currentPostImages?.length || 0);
+                console.log('🎤 currentPostAudio:', currentPostAudio ? 'Present' : 'NULL');
                 await updatePost(editingPostId, thoughtInput.innerHTML, selectedMood, currentPostImages, currentPostAudio, currentPostVideo);
                 showToast('Post updated!');
             } else {
