@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════════
 // MOODRING - Personal Mood Blog by Aashish Joshi
 // Admin-only posting, visitors can view and react
-// Version: 2026-03-08-v4
+// Version: 2026-11-10-v5
 // ═══════════════════════════════════════════════════════════════
-console.log('🎭 MoodRing Script Version: 2026-03-08-v4');
+console.log('🎭 MoodRing Script Version: 2026-11-10-v5');
 
 // ═══════════════════════════════════════════════════════════════
 // API CONFIGURATION
@@ -20,6 +20,7 @@ const API_CONFIG = {
 // ═══════════════════════════════════════════════════════════════
 const CONFIG = {
     STORAGE_KEY: 'moodring_posts',
+    CLOUD_CACHE_KEY: 'moodring_cloud_cache',
     THEME_KEY: 'moodring_theme',
     STREAK_KEY: 'moodring_streak',
     DRAFT_KEY: 'moodring_draft',
@@ -157,6 +158,20 @@ let editingPostId = null; // Track if we're editing a post
 const moodLabels = { blue: 'Melancholy', yellow: 'Vibrant', red: 'Fiery' };
 const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
 
+// How long to wait on any single cloud (Supabase) request before falling back
+// to local/cached data. Prevents the UI from hanging when the backend is
+// paused, slow, or unreachable.
+const CLOUD_TIMEOUT_MS = 6000;
+
+// Race a promise against a timeout. On timeout, resolves with `fallback`
+// instead of rejecting, so callers can degrade gracefully.
+function withTimeout(promise, ms = CLOUD_TIMEOUT_MS, fallback = null) {
+    return Promise.race([
+        Promise.resolve(promise).catch(() => fallback),
+        new Promise(resolve => setTimeout(() => resolve(fallback), ms)),
+    ]);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE INITIALIZATION
 // ═══════════════════════════════════════════════════════════════
@@ -288,7 +303,8 @@ async function syncAllPostsToCloud() {
 async function checkAuth() {
     if (!supabaseClient) return null;
     try {
-        const { data: { user } } = await supabaseClient.auth.getUser();
+        const res = await withTimeout(supabaseClient.auth.getUser(), CLOUD_TIMEOUT_MS, null);
+        const user = res?.data?.user || null;
         if (user) {
             currentUser = user;
             IS_ADMIN = true;
@@ -353,6 +369,27 @@ function getLocalPosts() {
     }
 }
 
+// Cache the latest set of cloud posts locally so the site still shows real
+// content when the backend is paused/offline. Media is stripped: base64 images
+// would eat the localStorage quota that saveLocalPosts depends on.
+function cacheCloudPosts(posts) {
+    if (!Array.isArray(posts)) return;
+    try {
+        const light = posts.map(p => ({ ...p, image: null, images: null }));
+        localStorage.setItem(CONFIG.CLOUD_CACHE_KEY, JSON.stringify(light));
+    } catch (e) {
+        // Best-effort; a missing cache only matters when the cloud is down.
+    }
+}
+
+function getCachedCloudPosts() {
+    try {
+        return JSON.parse(localStorage.getItem(CONFIG.CLOUD_CACHE_KEY) || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
 function saveLocalPosts(posts) {
     // Strip actual media data but keep references (IDs) for IndexedDB lookup
     const lightPosts = posts.map(p => ({
@@ -384,27 +421,47 @@ function saveLocalPosts(posts) {
 
 async function getAllPosts() {
     let supabasePosts = [];
+    let cloudOk = false;
     
     // Try Supabase
     if (supabaseClient) {
         try {
             console.log('Fetching posts from Supabase...');
-            const { data, error } = await supabaseClient
-                .from('posts')
-                .select('*')
-                .order('timestamp', { ascending: false });
+            const result = await withTimeout(
+                supabaseClient
+                    .from('posts')
+                    .select('*')
+                    .order('timestamp', { ascending: false }),
+                CLOUD_TIMEOUT_MS,
+                null
+            );
 
-            if (error) {
-                console.error('Supabase fetch error:', error);
-            } else if (data) {
-                console.log('Supabase posts found:', data.length);
-                supabasePosts = data;
+            if (!result) {
+                console.warn('Supabase fetch timed out or unreachable; using local/cached posts.');
+            } else if (result.error) {
+                console.error('Supabase fetch error:', result.error);
+            } else if (result.data) {
+                console.log('Supabase posts found:', result.data.length);
+                supabasePosts = result.data;
+                cloudOk = true;
+                // Cache latest cloud posts so they survive an offline/paused backend
+                cacheCloudPosts(result.data);
             }
         } catch (e) {
             console.error('Supabase fetch failed:', e);
         }
     } else {
         console.log('Supabase client not initialized');
+    }
+
+    // If the live cloud fetch failed (paused/offline/timed out), fall back to
+    // the last-known cloud posts we cached locally.
+    if (!cloudOk) {
+        const cached = getCachedCloudPosts();
+        if (cached.length > 0) {
+            console.warn('Using cached cloud posts:', cached.length);
+            supabasePosts = cached;
+        }
     }
 
     // Get local posts
@@ -496,7 +553,7 @@ async function createPost(text, mood, images = [], audio = null, video = null) {
     
     const newPost = {
         id: postId,
-        text: text.trim(),
+        text: unwrapPastedPostCards(text).trim(),
         mood,
         date: now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
         timestamp: now.getTime(),
@@ -587,6 +644,161 @@ async function deletePost(postId) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// BACKUP: EXPORT / IMPORT POSTS
+// A local safety net so posts can always be recovered even if the cloud
+// backend is paused, deleted, or unreachable.
+// ═══════════════════════════════════════════════════════════════
+async function exportPosts() {
+    try {
+        showToast('Preparing backup...');
+        const posts = (await getAllPosts()).filter(p => !p.isSample);
+
+        // Resolve any IndexedDB-stored media into the payload so the backup
+        // is fully self-contained.
+        const resolved = [];
+        for (const post of posts) {
+            const p = { ...post };
+            delete p.hasMedia;
+            try {
+                if (p.video && typeof p.video === 'string' && p.video.startsWith('video-')) {
+                    p.videoData = await getMediaFromIDB(p.video) || p.videoData || null;
+                }
+                if (p.audio && typeof p.audio === 'string' && p.audio.startsWith('audio-')) {
+                    p.audioData = await getMediaFromIDB(p.audio) || p.audioData || null;
+                }
+                if (Array.isArray(p.imageRefs) && p.imageRefs.length > 0) {
+                    const imgs = [];
+                    for (const ref of p.imageRefs) {
+                        const data = await getMediaFromIDB(ref);
+                        if (data) imgs.push(data);
+                    }
+                    if (imgs.length > 0 && !(p.images && p.images.length)) {
+                        p.images = imgs;
+                        p.image = imgs[0];
+                    }
+                }
+            } catch (e) {
+                console.warn('Media resolve failed for', p.id, e);
+            }
+            resolved.push(p);
+        }
+
+        const backup = {
+            app: 'MoodRing',
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            count: resolved.length,
+            posts: resolved,
+        };
+
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `moodring-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        showToast(`Exported ${resolved.length} post${resolved.length === 1 ? '' : 's'}`);
+    } catch (e) {
+        console.error('Export failed:', e);
+        showToast('Export failed');
+    }
+}
+
+async function importPosts(files) {
+    const file = files && files[0];
+    if (!file) return;
+    try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const incoming = Array.isArray(parsed) ? parsed : (parsed.posts || []);
+        if (!Array.isArray(incoming) || incoming.length === 0) {
+            showToast('No posts found in file');
+            return;
+        }
+
+        showToast('Importing...');
+        const existing = getLocalPosts();
+        const byId = new Map(existing.map(p => [p.id, p]));
+        let added = 0;
+
+        for (const raw of incoming) {
+            if (!raw || !raw.id || !raw.text) continue;
+            const post = { ...raw, isSample: false };
+
+            // Re-store media into IndexedDB and rebuild references.
+            try {
+                if (post.videoData && post.videoData.startsWith('data:')) {
+                    const vid = 'video-' + post.id;
+                    await saveMediaToIDB(vid, post.videoData, 'video');
+                    post.video = vid;
+                }
+                if (post.audioData && post.audioData.startsWith('data:')) {
+                    const aid = 'audio-' + post.id;
+                    await saveMediaToIDB(aid, post.audioData, 'audio');
+                    post.audio = aid;
+                }
+                if (Array.isArray(post.images) && post.images.length > 0) {
+                    const refs = [];
+                    for (let i = 0; i < post.images.length; i++) {
+                        const img = post.images[i];
+                        if (img && img.startsWith('data:')) {
+                            const iid = `image-${post.id}-${i}`;
+                            await saveMediaToIDB(iid, img, 'image');
+                            refs.push(iid);
+                        }
+                    }
+                    if (refs.length > 0) post.imageRefs = refs;
+                }
+            } catch (e) {
+                console.warn('Media import failed for', post.id, e);
+            }
+
+            byId.set(post.id, post);
+            added++;
+
+            // Best-effort push to cloud when signed in as admin.
+            if (IS_ADMIN && supabaseClient) {
+                try {
+                    const cloudImages = [];
+                    for (const img of post.images || (post.image ? [post.image] : [])) {
+                        if (img && img.startsWith('data:')) {
+                            const compressed = await recompressForSync(img);
+                            if (compressed) cloudImages.push(compressed);
+                        }
+                    }
+                    const cloudPost = {
+                        id: post.id, text: post.text, mood: post.mood,
+                        date: post.date, timestamp: post.timestamp,
+                        image: cloudImages[0] || null,
+                        images: cloudImages.length > 0 ? cloudImages : null,
+                    };
+                    await withTimeout(
+                        supabaseClient.from('posts').upsert(cloudPost, { onConflict: 'id' }),
+                        CLOUD_TIMEOUT_MS, null
+                    );
+                } catch (e) {
+                    console.warn('Cloud upsert failed for', post.id, e);
+                }
+            }
+        }
+
+        const merged = Array.from(byId.values()).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        saveLocalPosts(merged);
+        await renderPosts();
+        showToast(`Imported ${added} post${added === 1 ? '' : 's'}`);
+    } catch (e) {
+        console.error('Import failed:', e);
+        showToast('Import failed - invalid file');
+    } finally {
+        const input = document.getElementById('importInput');
+        if (input) input.value = '';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // REACTIONS (for visitors)
 // ═══════════════════════════════════════════════════════════════
 function getSessionId() {
@@ -602,10 +814,15 @@ async function getReactions(postId) {
     if (!supabaseClient) return {};
     
     try {
-        const { data } = await supabaseClient
-            .from('reactions')
-            .select('reaction_type')
-            .eq('post_id', postId);
+        const result = await withTimeout(
+            supabaseClient
+                .from('reactions')
+                .select('reaction_type')
+                .eq('post_id', postId),
+            CLOUD_TIMEOUT_MS,
+            null
+        );
+        const data = result?.data;
         
         const counts = { '❤️': 0, '👍': 0, '😂': 0, '🔥': 0, '💭': 0 };
         data?.forEach(r => {
@@ -703,6 +920,7 @@ async function renderPosts() {
     postsList.innerHTML = '<div class="loading-posts">Loading...</div>';
     
     let posts = await getAllPosts();
+    setCounts(posts);
     
     // Filter by mood
     if (currentFilter !== 'all') {
@@ -735,10 +953,9 @@ async function renderPosts() {
     // Load media from IndexedDB
     await loadMediaFromIDB();
 
-    // Load reactions
-    for (const post of posts) {
-        await updateReactionsSummary(post.id);
-    }
+    // Load reactions in the background so they don't block rendering or the
+    // post counts. Each call is individually time-boxed inside the summary fn.
+    Promise.allSettled(posts.map(post => updateReactionsSummary(post.id)));
 }
 
 async function loadMediaFromIDB() {
@@ -953,7 +1170,7 @@ function renderPostCard(post) {
                 ` : ''}
             </div>
             
-            <div class="post-content">${parseMarkdown(post.text)}</div>
+            <div class="post-content">${parseMarkdown(unwrapPastedPostCards(post.text))}</div>
             
             ${renderPostGallery(post)}
             ${post.video ? `<div class="post-video" data-video-ref="${post.video}"><video controls style="max-width: 100%; border-radius: 8px;"></video><span class="media-loading">Loading video...</span></div>` : ''}
@@ -1028,8 +1245,10 @@ function renderPostCard(post) {
 }
 
 async function updateCounts() {
-    const posts = await getAllPosts();
-    
+    setCounts(await getAllPosts());
+}
+
+function setCounts(posts) {
     document.getElementById('countAll').textContent = posts.length;
     document.getElementById('countBlue').textContent = posts.filter(p => p.mood === 'blue').length;
     document.getElementById('countYellow').textContent = posts.filter(p => p.mood === 'yellow').length;
@@ -1095,6 +1314,19 @@ function escapeForAttr(text) {
     return text.replace(/`/g, '\\`').replace(/\$/g, '\\$').replace(/"/g, '\\"');
 }
 
+// Pasting a rendered post back into the editor drags its card markup along,
+// which then renders as a card nested inside the new post.
+function unwrapPastedPostCards(html) {
+    if (!html || !html.includes('post-card')) return html;
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    tpl.content.querySelectorAll('article.post-card').forEach(card => {
+        const body = card.querySelector('.post-content') || card;
+        card.replaceWith(...Array.from(body.childNodes));
+    });
+    return tpl.innerHTML;
+}
+
 function parseMarkdown(text) {
     if (typeof marked !== 'undefined') {
         marked.setOptions({ breaks: true, gfm: true });
@@ -1136,7 +1368,7 @@ function openModal(preselectedMood = null) {
     const charCount = document.getElementById('charCount');
     const moodOptions = document.querySelectorAll('.mood-option');
     const submitBtn = document.getElementById('submitBtn');
-    const modalTitle = document.querySelector('.modal-header h2');
+    const modalTitle = document.querySelector('.modal-title');
 
     // Reset title and button
     if (modalTitle) modalTitle.textContent = 'New Post';
@@ -2147,7 +2379,8 @@ async function fetchWeather() {
         const moodSuggestion = weatherMoodMap[weather] || { suggestion: "How are you feeling?" };
         document.querySelector('.suggestion-text').textContent = moodSuggestion.suggestion;
         
-        widget.style.display = 'flex';
+        // Weather widget is admin-only; don't reveal it to logged-out visitors
+        if (IS_ADMIN) widget.style.display = 'flex';
     } catch (e) {}
 }
 
@@ -2187,14 +2420,14 @@ async function openModalForEdit(post) {
     const charCount = document.getElementById('charCount');
     const moodOptions = document.querySelectorAll('.mood-option');
     const submitBtn = document.getElementById('submitBtn');
-    const modalTitle = document.querySelector('.modal-header h2');
+    const modalTitle = document.querySelector('.modal-title');
 
     // Set title to "Edit Post"
     if (modalTitle) modalTitle.textContent = 'Edit Post';
 
     // Fill in the existing content
     if (thoughtInput) {
-        thoughtInput.innerHTML = post.text;
+        thoughtInput.innerHTML = unwrapPastedPostCards(post.text);
         if (charCount) charCount.textContent = thoughtInput.innerText.length;
     }
 
@@ -2304,7 +2537,7 @@ async function updatePost(postId, text, mood, images = [], audio = null, video =
     }
     
     const updatedData = {
-        text: text.trim(),
+        text: unwrapPastedPostCards(text).trim(),
         mood,
         images: images.length > 0 ? images : null,
         image: images.length >= 1 ? images[0] : null,
@@ -2404,6 +2637,9 @@ function setupEventListeners() {
     
     // Write button
     document.getElementById('writeTrigger')?.addEventListener('click', () => openModal());
+
+    // Backup export (import is wired via inline onchange on the file input)
+    document.getElementById('exportBtn')?.addEventListener('click', exportPosts);
     
     // Modal
     document.getElementById('modalClose')?.addEventListener('click', closeModal);
@@ -2533,7 +2769,6 @@ function setupEventListeners() {
             closeModal();
             clearDraft();
             await renderPosts();
-            await updateCounts();
         } catch (err) {
             console.error('Publish/Update error:', err);
             showToast('Failed: ' + err.message);
@@ -2842,7 +3077,6 @@ async function init() {
     fetchVisitorCount();
     
     await renderPosts();
-    await updateCounts();
 }
 
 document.addEventListener('DOMContentLoaded', init);
