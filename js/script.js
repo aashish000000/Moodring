@@ -911,15 +911,23 @@ async function fetchVisitorCount() {
 // ═══════════════════════════════════════════════════════════════
 // RENDERING
 // ═══════════════════════════════════════════════════════════════
-async function renderPosts() {
+// The last list of posts fetched, so filtering and searching can redraw from
+// memory instead of going back to the cloud for data that has not changed.
+let loadedPosts = null;
+
+// Pass { refresh: false } to redraw from the posts already in memory.
+async function renderPosts({ refresh = true } = {}) {
     const postsList = document.getElementById('postsList');
     const resultsCount = document.getElementById('resultsCount');
     
     if (!postsList) return;
     
-    postsList.innerHTML = '<div class="loading-posts">Loading...</div>';
-    
-    let posts = await getAllPosts();
+    if (refresh || !loadedPosts) {
+        postsList.innerHTML = '<div class="loading-posts">Loading...</div>';
+        loadedPosts = await getAllPosts();
+    }
+
+    let posts = loadedPosts;
     setCounts(posts);
     
     // Filter by mood
@@ -2443,7 +2451,7 @@ function copyToClipboard(text, url = window.location.href) {
 function handleSearch(query) {
     searchQuery = query.toLowerCase().trim();
     document.getElementById('searchClear').style.display = query ? 'block' : 'none';
-    renderPosts();
+    renderPosts({ refresh: false });
 }
 
 function clearSearch() {
@@ -2452,7 +2460,7 @@ function clearSearch() {
     if (input) input.value = '';
     if (clear) clear.style.display = 'none';
     searchQuery = '';
-    renderPosts();
+    renderPosts({ refresh: false });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2832,7 +2840,7 @@ function setupEventListeners() {
             const titles = { all: 'All Posts', blue: 'Melancholy Posts', yellow: 'Vibrant Posts', red: 'Fiery Posts' };
             document.getElementById('sectionTitle').textContent = titles[currentFilter];
             
-            renderPosts();
+            renderPosts({ refresh: false });
         });
     });
     
