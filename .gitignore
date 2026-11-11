@@ -10,3 +10,6 @@ Thumbs.db
 *.bak
 *.backup
 
+
+# Local Claude preview config
+.claude/

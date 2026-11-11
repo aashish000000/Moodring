@@ -41,6 +41,15 @@
     --radius-lg: 14px;
     --radius-xl: 20px;
     --spotify-green: #2a2a2a;
+
+    /* Mood colours: the only colour on the site, used for the mood pill,
+       the rule beside each post and the active filter. */
+    --mood-blue: #2c5a85;
+    --mood-blue-bg: #e8eff6;
+    --mood-yellow: #8a6100;
+    --mood-yellow-bg: #f8efd3;
+    --mood-red: #b0392b;
+    --mood-red-bg: #fae8e4;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -67,6 +76,12 @@
     --accent-red-bg: rgba(255, 255, 255, 0.06);
     --accent-green: #e0e0e0;
     --accent-green-bg: rgba(255, 255, 255, 0.08);
+    --mood-blue: #8fb9e2;
+    --mood-blue-bg: rgba(143, 185, 226, 0.13);
+    --mood-yellow: #e2bc5c;
+    --mood-yellow-bg: rgba(226, 188, 92, 0.13);
+    --mood-red: #f08c7d;
+    --mood-red-bg: rgba(240, 140, 125, 0.13);
     --shadow-xs: 0 1px 3px rgba(0,0,0,0.3);
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
     --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
@@ -740,6 +755,22 @@ body {
     color: var(--accent-blue);
 }
 
+.filter-btn[data-filter="blue"] { --mood: var(--mood-blue); --mood-bg: var(--mood-blue-bg); }
+.filter-btn[data-filter="yellow"] { --mood: var(--mood-yellow); --mood-bg: var(--mood-yellow-bg); }
+.filter-btn[data-filter="red"] { --mood: var(--mood-red); --mood-bg: var(--mood-red-bg); }
+
+.filter-btn[data-filter]:not([data-filter="all"]).active {
+    background: var(--mood-bg);
+    color: var(--mood);
+}
+
+.filter-btn[data-filter]:not([data-filter="all"]).active .filter-count {
+    background: transparent;
+    color: inherit;
+    padding-left: 0;
+    padding-right: 0;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    POSTS SECTION
    ═══════════════════════════════════════════════════════════════ */
@@ -776,12 +807,26 @@ body {
    POST CARD - Enhanced Design
    ═══════════════════════════════════════════════════════════════ */
 .post-card {
+    --mood: var(--border-color);
+    --mood-bg: var(--bg-secondary);
     position: relative;
-    padding: 1.25rem 0;
-    border-bottom: 1px solid var(--border-light);
-    transition: all 0.2s ease;
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    margin-bottom: 2.5rem;
+    border-left: 2px solid var(--mood);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    scroll-margin-top: 1.5rem;
+    transition: background-color 0.6s ease;
     animation: fadeInUp 0.4s ease forwards;
     opacity: 0;
+}
+
+.post-card.blue { --mood: var(--mood-blue); --mood-bg: var(--mood-blue-bg); }
+.post-card.yellow { --mood: var(--mood-yellow); --mood-bg: var(--mood-yellow-bg); }
+.post-card.red { --mood: var(--mood-red); --mood-bg: var(--mood-red-bg); }
+
+/* Briefly tinted when arrived at through a link to this post */
+.post-card.is-linked {
+    background-color: var(--mood-bg);
 }
 
 .post-card:nth-child(1) { animation-delay: 0.05s; }
@@ -792,7 +837,7 @@ body {
 .post-card:nth-child(n+6) { animation-delay: 0.3s; }
 
 .post-card:last-child {
-    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .post-card.user-post {
@@ -833,23 +878,30 @@ body {
 }
 
 .post-mood.blue {
-    background: var(--accent-blue-bg);
-    color: var(--accent-blue);
+    background: var(--mood-blue-bg);
+    color: var(--mood-blue);
 }
 
 .post-mood.yellow {
-    background: var(--accent-yellow-bg);
-    color: var(--accent-yellow);
+    background: var(--mood-yellow-bg);
+    color: var(--mood-yellow);
 }
 
 .post-mood.red {
-    background: var(--accent-red-bg);
-    color: var(--accent-red);
+    background: var(--mood-red-bg);
+    color: var(--mood-red);
 }
 
 .post-date {
     font-size: 0.8rem;
     color: var(--text-muted);
+    text-decoration: none;
+}
+
+a.post-date:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 .post-reading-time {
@@ -1020,6 +1072,41 @@ body {
     margin-bottom: 0.85rem;
 }
 
+.post-content .post-title {
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.015em;
+    margin-bottom: 0.85rem;
+    text-wrap: balance;
+}
+
+/* Long posts open as an excerpt that fades out */
+.post-card.is-collapsed .post-content {
+    max-height: 12.6em;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 50%, transparent);
+    mask-image: linear-gradient(to bottom, #000 50%, transparent);
+}
+
+.read-more {
+    display: inline-block;
+    margin-top: 0.5rem;
+    padding: 0.35rem 0;
+    background: none;
+    border: none;
+    color: var(--mood);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.read-more:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
 .post-content p:last-child {
     margin-bottom: 0;
 }
@@ -1106,6 +1193,21 @@ body {
 
 .footer-text a:hover {
     color: var(--accent-blue);
+}
+
+.footer-login {
+    padding: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.footer-login:hover {
+    color: var(--text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2414,12 +2516,12 @@ label.toolbar-btn {
     
     /* Compact post cards */
     .post-card {
-        padding: 0.75rem 0;
-        border-bottom: 1px solid var(--border-light);
+        padding: 0.15rem 0 0.15rem 0.9rem;
+        margin-bottom: 1.75rem;
     }
-    
-    .post-card:last-child {
-        border-bottom: none;
+
+    .post-content .post-title {
+        font-size: 1.35rem;
     }
 
     .post-meta {
@@ -2648,8 +2750,7 @@ label.toolbar-btn {
     .theme-toggle:hover,
     .filter-btn:hover,
     .mood-option:hover,
-    .submit-btn:hover:not(:disabled),
-    .post-card:hover {
+    .submit-btn:hover:not(:disabled) {
         transform: none;
         box-shadow: var(--shadow-xs);
     }
@@ -2886,6 +2987,7 @@ button {
     border: none;
     border-radius: var(--radius-md);
     color: var(--text-secondary);
+    font-family: inherit;
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;

@@ -1147,13 +1147,15 @@ window.openImageViewer = openImageViewer;
 
 function renderPostCard(post) {
     const isOwner = IS_ADMIN && !post.isSample;
+    const body = renderPostBody(post);
+    const readingTime = readingTimeFromWords(body.words);
     
     return `
-        <article class="post-card ${post.mood}" data-id="${post.id}">
+        <article class="post-card ${post.mood}${body.isLong ? ' is-collapsed' : ''}" id="${post.id}" data-id="${post.id}">
             <div class="post-meta">
                 <span class="post-mood ${post.mood}">${moodEmojis[post.mood]} ${moodLabels[post.mood]}</span>
-                <span class="post-date">${post.date}</span>
-                <span class="post-reading-time">${calculateReadingTime(post.text)}</span>
+                <a class="post-date" href="#${post.id}" title="Link to this post">${post.date}</a>
+                <span class="post-reading-time">${readingTime}</span>
                 ${isOwner ? `
                     <div class="post-actions admin-only">
                         <button class="edit-btn" onclick="handleEdit('${post.id}')" title="Edit">
@@ -1170,7 +1172,8 @@ function renderPostCard(post) {
                 ` : ''}
             </div>
             
-            <div class="post-content">${parseMarkdown(unwrapPastedPostCards(post.text))}</div>
+            <div class="post-content">${body.html}</div>
+            ${body.isLong ? `<button type="button" class="read-more" aria-expanded="false" data-label="Continue reading · ${readingTime}">Continue reading · ${readingTime}</button>` : ''}
             
             ${renderPostGallery(post)}
             ${post.video ? `<div class="post-video" data-video-ref="${post.video}"><video controls style="max-width: 100%; border-radius: 8px;"></video><span class="media-loading">Loading video...</span></div>` : ''}
@@ -1224,6 +1227,10 @@ function renderPostCard(post) {
                         <button data-share="email">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                             Email
+                        </button>
+                        <button data-share="link">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>
+                            Copy link
                         </button>
                         <button data-share="copy">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -1335,10 +1342,140 @@ function parseMarkdown(text) {
     return escapeHtml(text).replace(/\n/g, '<br>');
 }
 
-function calculateReadingTime(text) {
-    const words = text.trim().split(/\s+/).length;
+// Posts are written in a contenteditable box, so anything pasted in from
+// Notes, Word or another site brings its own fonts and sizes along as inline
+// styles. This strips presentation (and anything executable) so every post
+// renders in the site's own typography. Bold and italic survive.
+const POST_DROP_TAGS = 'script,style,meta,link,title,iframe,object,embed,form,input,button,textarea,select,svg';
+const POST_KEEP_ATTRS = { A: ['href'], IMG: ['src', 'alt'] };
+
+function cleanPostHtml(html) {
+    if (!html) return '';
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    const root = tpl.content;
+
+    root.querySelectorAll(POST_DROP_TAGS).forEach(el => el.remove());
+
+    // Emphasis that only exists as a style would be lost with the style.
+    root.querySelectorAll('span[style], font[style]').forEach(el => {
+        const weight = el.style.fontWeight;
+        const tag = (weight === 'bold' || parseInt(weight, 10) >= 600) ? 'strong'
+            : el.style.fontStyle === 'italic' ? 'em' : null;
+        if (!tag) return;
+        const wrapper = document.createElement(tag);
+        wrapper.append(...el.childNodes);
+        el.append(wrapper);
+    });
+    // Google Docs wraps a whole paste in <b style="font-weight:normal">.
+    root.querySelectorAll('b[style], strong[style]').forEach(el => {
+        if (el.style.fontWeight === 'normal' || el.style.fontWeight === '400') {
+            el.replaceWith(...el.childNodes);
+        }
+    });
+
+    root.querySelectorAll('*').forEach(el => {
+        const keep = POST_KEEP_ATTRS[el.tagName] || [];
+        Array.from(el.attributes).forEach(attr => {
+            if (!keep.includes(attr.name)) el.removeAttribute(attr.name);
+        });
+        if (el.tagName === 'A') {
+            if (/^(https?:|mailto:)/i.test(el.getAttribute('href') || '')) {
+                el.setAttribute('target', '_blank');
+                el.setAttribute('rel', 'noopener');
+            } else {
+                el.removeAttribute('href');
+            }
+        }
+        if (el.tagName === 'IMG' && !/^(https?:|data:image\/)/i.test(el.getAttribute('src') || '')) {
+            el.remove();
+        }
+    });
+
+    root.querySelectorAll('span, font').forEach(el => el.replaceWith(...el.childNodes));
+
+    // Paragraphs already carry their own spacing, so an empty one is only a
+    // stray double gap.
+    root.querySelectorAll('p').forEach(el => {
+        if (!el.textContent.trim() && !el.querySelector('img')) el.remove();
+    });
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_COMMENT);
+    const comments = [];
+    while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.nodeType === Node.COMMENT_NODE) comments.push(node);
+        else node.nodeValue = node.nodeValue.replace(/ /g, ' ');
+    }
+    comments.forEach(node => node.remove());
+
+    return tpl.innerHTML;
+}
+
+function countWords(text) {
+    const trimmed = (text || '').trim();
+    return trimmed ? trimmed.split(/\s+/).length : 0;
+}
+
+// Posts longer than this open as an excerpt with a "Continue reading" button.
+const LONG_POST_WORDS = 140;
+
+// Turns a stored post into display HTML. An essay's opening line is promoted
+// to a real heading when it reads like a title: short, no closing full stop,
+// and followed by a body.
+function renderPostBody(post) {
+    const tpl = document.createElement('template');
+    tpl.innerHTML = cleanPostHtml(parseMarkdown(unwrapPastedPostCards(post.text || '')));
+    const root = tpl.content;
+    const words = countWords(root.textContent);
+
+    if (words > LONG_POST_WORDS) {
+        const first = Array.from(root.children).find(el => el.textContent.trim());
+        const text = first ? first.textContent.trim() : '';
+        const isBlock = first && /^(P|DIV|H[1-6])$/.test(first.tagName);
+        if (isBlock && text.length >= 8 && text.length <= 110 && !/[.,;]$/.test(text) && !first.querySelector('br, p, div')) {
+            const title = document.createElement('h2');
+            title.className = 'post-title';
+            title.textContent = text;
+            first.replaceWith(title);
+        }
+    }
+
+    return { html: tpl.innerHTML, words, isLong: words > LONG_POST_WORDS };
+}
+
+function readingTimeFromWords(words) {
     const minutes = Math.ceil(words / CONFIG.WORDS_PER_MINUTE);
     return minutes < 1 ? '< 1 min read' : `${minutes} min read`;
+}
+
+function calculateReadingTime(text) {
+    return readingTimeFromWords(countWords(text));
+}
+
+function getPostUrl(postId) {
+    return `${window.location.origin}${window.location.pathname}#${postId}`;
+}
+
+// Scrolls to the post named in the URL hash, opens it if it is collapsed and
+// tints it for a moment so it is clear which post the link meant.
+function focusPostFromHash() {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    const card = document.getElementById(id);
+    if (!card || !card.classList.contains('post-card')) return;
+    setPostExpanded(card, true);
+    card.scrollIntoView({ block: 'start' });
+    card.classList.add('is-linked');
+    setTimeout(() => card.classList.remove('is-linked'), 2200);
+}
+
+function setPostExpanded(card, expanded) {
+    const button = card.querySelector('.read-more');
+    if (!button) return;
+    card.classList.toggle('is-collapsed', !expanded);
+    button.setAttribute('aria-expanded', String(expanded));
+    button.textContent = expanded ? 'Show less' : button.dataset.label;
 }
 
 function showToast(message) {
@@ -1927,41 +2064,45 @@ function getPostTextById(postId) {
 
 function handleShareAction(shareType, postId) {
     const text = getPostTextById(postId);
+    const url = getPostUrl(postId);
     
     switch (shareType) {
+        case 'link':
+            navigator.clipboard.writeText(url).then(() => showToast('Link copied'));
+            closeAllShareMenus();
+            break;
         case 'twitter':
-            shareToTwitter(text);
+            shareToTwitter(text, url);
             break;
         case 'facebook':
-            shareToFacebook(text);
+            shareToFacebook(text, url);
             break;
         case 'linkedin':
-            shareToLinkedIn(text);
+            shareToLinkedIn(text, url);
             break;
         case 'whatsapp':
-            shareToWhatsApp(text);
+            shareToWhatsApp(text, url);
             break;
         case 'telegram':
-            shareToTelegram(text);
+            shareToTelegram(text, url);
             break;
         case 'email':
-            shareViaEmail(text);
+            shareViaEmail(text, url);
             break;
         case 'copy':
-            copyToClipboard(text);
+            copyToClipboard(text, url);
             break;
         case 'image':
             shareAsImage(postId);
             break;
         case 'native':
-            nativeShare(text);
+            nativeShare(text, url);
             break;
     }
 }
 
-function shareToTwitter(text) {
+function shareToTwitter(text, url = window.location.href) {
     const truncated = text.length > 250 ? text.substring(0, 247) + '...' : text;
-    const url = window.location.href;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(truncated + '\n\n— Aashish Joshi')}&url=${encodeURIComponent(url)}`, '_blank');
     closeAllShareMenus();
 }
@@ -2247,55 +2388,51 @@ function wrapText(ctx, text, maxWidth, fontSize) {
     return lines;
 }
 
-function shareToFacebook(text) {
-    const url = window.location.href;
+function shareToFacebook(text, url = window.location.href) {
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}&quote=${encodeURIComponent(text)}`, '_blank', 'width=600,height=400');
     closeAllShareMenus();
 }
 
-function shareToLinkedIn(text) {
-    const url = window.location.href;
+function shareToLinkedIn(text, url = window.location.href) {
     window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400');
     closeAllShareMenus();
 }
 
-function shareToWhatsApp(text) {
+function shareToWhatsApp(text, url = window.location.href) {
     const truncated = text.length > 500 ? text.substring(0, 497) + '...' : text;
-    const url = window.location.href;
     const message = `${truncated}\n\n— Aashish Joshi\n${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
     closeAllShareMenus();
 }
 
-function shareToTelegram(text) {
+function shareToTelegram(text, url = window.location.href) {
     const truncated = text.length > 500 ? text.substring(0, 497) + '...' : text;
-    const url = window.location.href;
     window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(truncated + '\n\n— Aashish Joshi')}`, '_blank');
     closeAllShareMenus();
 }
 
-function shareViaEmail(text) {
+function shareViaEmail(text, url = window.location.href) {
     const subject = 'Check out this thought from Aashish Joshi';
-    const body = `${text}\n\n— Aashish Joshi\n\nRead more: ${window.location.href}`;
+    const body = `${text}\n\n— Aashish Joshi\n\nRead more: ${url}`;
     window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     closeAllShareMenus();
 }
 
-function nativeShare(text) {
+function nativeShare(text, url = window.location.href) {
     if (navigator.share) {
         navigator.share({
             title: 'Aashish Joshi — Thoughts',
             text: text,
-            url: window.location.href
+            url: url
         }).catch(() => {});
     } else {
-        copyToClipboard(text);
+        copyToClipboard(text, url);
     }
     closeAllShareMenus();
 }
 
-function copyToClipboard(text) {
-    const fullText = `${text}\n\n— Aashish Joshi\n${window.location.href}`;
+function copyToClipboard(text, url = window.location.href) {
+    const fullText = `${text}\n\n— Aashish Joshi\n${url}`;
     navigator.clipboard.writeText(fullText).then(() => showToast('Copied to clipboard'));
     closeAllShareMenus();
 }
@@ -2722,6 +2859,20 @@ function setupEventListeners() {
         updateToolbarActiveState();
     });
     
+    // Paste as clean content: keep structure and emphasis, drop foreign styling.
+    thoughtInput?.addEventListener('paste', (e) => {
+        const clipboard = e.clipboardData;
+        if (!clipboard) return;
+        const html = clipboard.getData('text/html');
+        const text = clipboard.getData('text/plain');
+        if (!html && !text) return;
+        e.preventDefault();
+        const clean = html
+            ? cleanPostHtml(unwrapPastedPostCards(html))
+            : escapeHtml(text).replace(/\n/g, '<br>');
+        document.execCommand('insertHTML', false, clean);
+    });
+
     thoughtInput?.addEventListener('keyup', updateToolbarActiveState);
     thoughtInput?.addEventListener('click', updateToolbarActiveState);
     
@@ -2939,6 +3090,18 @@ function setupEventListeners() {
         clearTimeout(longPressTimer);
     });
     
+    // Expand / collapse long posts
+    document.addEventListener('click', (e) => {
+        const button = e.target.closest('.read-more');
+        if (!button) return;
+        const card = button.closest('.post-card');
+        const expand = card.classList.contains('is-collapsed');
+        setPostExpanded(card, expand);
+        if (!expand) card.scrollIntoView({ block: 'nearest' });
+    });
+
+    window.addEventListener('hashchange', focusPostFromHash);
+
     // Handle share menu button clicks via event delegation
     document.addEventListener('click', (e) => {
         const shareBtn = e.target.closest('[data-share]');
@@ -3076,7 +3239,11 @@ async function init() {
     trackVisitor();
     fetchVisitorCount();
     
+    const footerYear = document.getElementById('footerYear');
+    if (footerYear) footerYear.textContent = new Date().getFullYear();
+
     await renderPosts();
+    focusPostFromHash();
 }
 
 document.addEventListener('DOMContentLoaded', init);

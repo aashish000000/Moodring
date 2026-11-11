@@ -23,7 +23,7 @@
     <meta property="og:locale" content="en_US">
     
     <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
+    <meta name="twitter:card" content="summary">
     <meta property="twitter:url" content="https://aashish000000.github.io/Moodring/">
     <meta property="twitter:title" content="Aashish Joshi — Thoughts & Musings">
     <meta property="twitter:description" content="A personal space for thoughts, ideas, and creative musings by Aashish Joshi.">
@@ -138,13 +138,6 @@
                         </svg>
                         <span>New Post</span>
                     </button>
-                    <!-- Login Button -->
-                    <button class="login-btn" id="loginBtn" title="Admin Login">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                        </svg>
-                        <span>Login</span>
-                    </button>
                 </div>
             </div>
         </header>
@@ -158,19 +151,6 @@
             <div class="weather-suggestion">
                 <span class="suggestion-text">Cloudy day... time for deep thoughts?</span>
             </div>
-        </div>
-
-        <!-- Quote of the Day -->
-        <div class="quote-widget" id="quoteWidget">
-            <blockquote class="daily-quote">
-                <p class="quote-text" id="quoteText">"The only way to do great work is to love what you do."</p>
-                <cite class="quote-author" id="quoteAuthor">— Steve Jobs</cite>
-            </blockquote>
-            <button class="quote-refresh" id="quoteRefresh" title="New quote">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-            </button>
         </div>
 
         <!-- About Section -->
@@ -275,7 +255,8 @@
                 <span id="visitorCount">0</span> visitors
             </div>
             <p class="footer-text">
-                © 2024 <a href="#">Aashish Joshi</a> · Made with intention
+                © <span id="footerYear">2026</span> <a href="#">Aashish Joshi</a> · Made with intention ·
+                <button type="button" class="footer-login" id="loginBtn" title="Admin login"><span>Login</span></button>
             </p>
         </footer>
     </div>
