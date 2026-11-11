@@ -35,7 +35,7 @@ jobs:
           fi
           # Commit as the repo owner so the bot does not appear as a contributor.
           git config user.name "aashish000000"
-          git config user.email "ajoshi4@caldwell.edu"
+          git config user.email "ajoshi@njcu.edu"
           git add feed.xml
           git commit -m "Update RSS feed"
           git push
