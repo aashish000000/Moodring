@@ -1,12 +1,13 @@
 // Service Worker for PWA
-const CACHE_NAME = 'moodring-v4';
+const CACHE_NAME = 'moodring-v5';
+// Relative to this file (js/sw.js) so the site works from a subpath like /Moodring/.
 const urlsToCache = [
-    '/',
-    '/index.html',
-    '/css/styles.css',
-    '/js/script.js',
-    '/manifest.json',
-    '/assets/avatar.png'
+    '../',
+    '../index.html',
+    '../css/styles.css',
+    'script.js',
+    '../manifest.json',
+    '../assets/avatar.png'
 ];
 
 // Install event

@@ -2,7 +2,7 @@
     "name": "MoodRing",
     "short_name": "MoodRing",
     "description": "Share your mood — melancholic musings, vibrant celebrations & fiery rants",
-    "start_url": "/",
+    "start_url": "./",
     "display": "standalone",
     "background_color": "#fafafa",
     "theme_color": "#1a1a1a",
