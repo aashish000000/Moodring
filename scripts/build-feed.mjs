@@ -8,7 +8,6 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 const SITE_URL = 'https://aashish000000.github.io/Moodring/';
 const MAX_ITEMS = 30;
-const MOODS = { blue: 'Melancholy', yellow: 'Vibrant', red: 'Fiery' };
 
 const root = new URL('../', import.meta.url);
 const siteScript = await readFile(new URL('js/script.js', root), 'utf8');
@@ -19,7 +18,7 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 const response = await fetch(
-    `${supabaseUrl}/rest/v1/posts?select=id,text,mood,timestamp&order=timestamp.desc&limit=${MAX_ITEMS}`,
+    `${supabaseUrl}/rest/v1/posts?select=id,text,timestamp&order=timestamp.desc&limit=${MAX_ITEMS}`,
     {
         headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
         signal: AbortSignal.timeout(30_000),
@@ -76,7 +75,6 @@ const items = posts.map(post => {
             <link>${escapeXml(link)}</link>
             <guid isPermaLink="true">${escapeXml(link)}</guid>
             <pubDate>${new Date(Number(post.timestamp)).toUTCString()}</pubDate>
-            <category>${MOODS[post.mood] ?? 'Thought'}</category>
             <description>${escapeXml(body)}</description>
         </item>`;
 });
@@ -90,7 +88,7 @@ const feed = `<?xml version="1.0" encoding="UTF-8"?>
     <channel>
         <title>Aashish Joshi - Personal Blog</title>
         <link>${SITE_URL}</link>
-        <description>Thoughts, ideas &amp; creative musings by Aashish Joshi. A personal space for melancholic musings, vibrant celebrations, and fiery rants.</description>
+        <description>Thoughts, ideas &amp; creative musings by Aashish Joshi. A personal space for unfiltered thoughts.</description>
         <language>en-us</language>
         <lastBuildDate>${lastBuild}</lastBuildDate>
         <atom:link href="${SITE_URL}feed.xml" rel="self" type="application/rss+xml"/>

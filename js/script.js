@@ -147,16 +147,17 @@ const samplePosts = [
 let supabaseClient = null;
 let IS_ADMIN = false;
 let currentUser = null;
-let currentFilter = 'all';
+// The site no longer shows moods, but every stored post still has a `mood`
+// column. New posts get this value so the database shape stays unchanged;
+// edited posts keep whatever they already had.
+const DEFAULT_MOOD = 'blue';
 let searchQuery = '';
-let selectedMood = null;
+let selectedMood = DEFAULT_MOOD;
 let currentPostImages = [];
 let currentPostVideo = null;
 let currentPostAudio = null;
 let editingPostId = null; // Track if we're editing a post
 
-const moodLabels = { blue: 'Melancholy', yellow: 'Vibrant', red: 'Fiery' };
-const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
 
 // How long to wait on any single cloud (Supabase) request before falling back
 // to local/cached data. Prevents the UI from hanging when the backend is
@@ -930,12 +931,6 @@ async function renderPosts({ refresh = true } = {}) {
     }
 
     let posts = loadedPosts;
-    setCounts(posts);
-    
-    // Filter by mood
-    if (currentFilter !== 'all') {
-        posts = posts.filter(p => p.mood === currentFilter);
-    }
     
     // Search
     if (searchQuery) {
@@ -1161,9 +1156,8 @@ function renderPostCard(post) {
     const readingTime = readingTimeFromWords(body.words);
     
     return `
-        <article class="post-card ${post.mood}${body.isLong ? ' is-collapsed' : ''}" id="${post.id}" data-id="${post.id}">
+        <article class="post-card${body.isLong ? ' is-collapsed' : ''}" id="${post.id}" data-id="${post.id}">
             <div class="post-meta">
-                <span class="post-mood ${post.mood}">${moodEmojis[post.mood]} ${moodLabels[post.mood]}</span>
                 <a class="post-date" href="#${post.id}" title="Link to this post">${post.date}</a>
                 <span class="post-reading-time">${readingTime}</span>
                 ${isOwner ? `
@@ -1261,25 +1255,6 @@ function renderPostCard(post) {
     `;
 }
 
-async function updateCounts() {
-    setCounts(await getAllPosts());
-}
-
-function setCounts(posts) {
-    document.getElementById('countAll').textContent = posts.length;
-    document.getElementById('countBlue').textContent = posts.filter(p => p.mood === 'blue').length;
-    document.getElementById('countYellow').textContent = posts.filter(p => p.mood === 'yellow').length;
-    document.getElementById('countRed').textContent = posts.filter(p => p.mood === 'red').length;
-
-    document.querySelectorAll('[data-count]').forEach(el => {
-        const mood = el.dataset.count;
-        el.textContent = mood === 'all' ? posts.length : posts.filter(p => p.mood === mood).length;
-    });
-}
-
-// ═══════════════════════════════════════════════════════════════
-// STREAK TRACKER
-// ═══════════════════════════════════════════════════════════════
 function getStreakData() {
     try {
         return JSON.parse(localStorage.getItem(CONFIG.STREAK_KEY) || '{"count":0,"lastDate":null}');
@@ -1506,7 +1481,7 @@ function showToast(message) {
 // ═══════════════════════════════════════════════════════════════
 // MODAL FUNCTIONS
 // ═══════════════════════════════════════════════════════════════
-function openModal(preselectedMood = null) {
+function openModal() {
     if (!IS_ADMIN) {
         showToast('Only Aashish can write posts');
         return;
@@ -1518,7 +1493,6 @@ function openModal(preselectedMood = null) {
     const modalOverlay = document.getElementById('modalOverlay');
     const thoughtInput = document.getElementById('thoughtInput');
     const charCount = document.getElementById('charCount');
-    const moodOptions = document.querySelectorAll('.mood-option');
     const submitBtn = document.getElementById('submitBtn');
     const modalTitle = document.querySelector('.modal-title');
 
@@ -1529,8 +1503,7 @@ function openModal(preselectedMood = null) {
     if (thoughtInput) thoughtInput.innerHTML = '';
     if (charCount) charCount.textContent = '0';
 
-    moodOptions.forEach(o => o.classList.remove('selected'));
-    selectedMood = null;
+    selectedMood = DEFAULT_MOOD;
     currentPostImages = [];
     currentPostVideo = null;
     currentPostAudio = null;
@@ -1538,14 +1511,7 @@ function openModal(preselectedMood = null) {
     removeVideo();
     removeAudio();
 
-    if (preselectedMood) {
-        const moodBtn = document.querySelector(`.mood-option.${preselectedMood}`);
-        if (moodBtn) {
-            moodBtn.classList.add('selected');
-            selectedMood = preselectedMood;
-            fetchAIPrompt(preselectedMood);
-        }
-    }
+    fetchAIPrompt();
 
     validateForm();
     if (modalOverlay) modalOverlay.classList.add('visible');
@@ -1563,21 +1529,10 @@ function validateForm() {
     const submitBtn = document.getElementById('submitBtn');
 
     const hasText = thoughtInput && thoughtInput.innerText.trim().length > 0;
-    const hasMood = selectedMood !== null;
-    
+
     if (submitBtn) {
-        submitBtn.disabled = !(hasText && hasMood);
-        
-        // Update button text to show what's missing
-        if (!hasText && !hasMood) {
-            submitBtn.textContent = 'Write & select mood';
-        } else if (!hasText) {
-            submitBtn.textContent = 'Write something';
-        } else if (!hasMood) {
-            submitBtn.textContent = 'Select a mood';
-        } else {
-            submitBtn.textContent = 'Publish';
-        }
+        submitBtn.disabled = !hasText;
+        submitBtn.textContent = hasText ? 'Publish' : 'Write something';
     }
 }
 
@@ -1616,9 +1571,6 @@ function openMenu() {
     if (!menu) return;
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     document.getElementById('menuThemeLabel').textContent = isDark ? 'Light mode' : 'Dark mode';
-    menu.querySelectorAll('[data-menu-filter]').forEach(item => {
-        item.toggleAttribute('aria-current', item.dataset.menuFilter === currentFilter);
-    });
     menu.inert = false;
     menu.classList.add('open');
     document.getElementById('menuBackdrop').classList.add('visible');
@@ -1642,13 +1594,6 @@ function closeMenu({ restoreFocus = true } = {}) {
 function handleMenuClick(e) {
     const item = e.target.closest('.menu-item');
     if (!item) return;
-
-    if (item.dataset.menuFilter) {
-        closeMenu({ restoreFocus: false });
-        document.querySelector(`.filter-btn[data-filter="${item.dataset.menuFilter}"]`)?.click();
-        document.getElementById('navFilters')?.scrollIntoView({ block: 'start' });
-        return;
-    }
 
     switch (item.dataset.menuAction) {
         case 'theme':
@@ -2093,14 +2038,7 @@ function restoreDraft() {
             if (charCount) charCount.textContent = thoughtInput.innerText.length;
         }
         
-        if (draft.mood) {
-            const moodBtn = document.querySelector(`.mood-option.${draft.mood}`);
-            if (moodBtn) {
-                document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
-                moodBtn.classList.add('selected');
-                selectedMood = draft.mood;
-            }
-        }
+        if (draft.mood) selectedMood = draft.mood;
         
         validateForm();
         
@@ -2119,11 +2057,11 @@ function clearDraft() {
 // ═══════════════════════════════════════════════════════════════
 // AI WRITING PROMPTS
 // ═══════════════════════════════════════════════════════════════
-function fetchAIPrompt(mood) {
+function fetchAIPrompt() {
     const promptText = document.getElementById('aiPromptText');
     if (!promptText) return;
     
-    const prompts = FALLBACK_PROMPTS[mood] || FALLBACK_PROMPTS.yellow;
+    const prompts = Object.values(FALLBACK_PROMPTS).flat();
     promptText.textContent = prompts[Math.floor(Math.random() * prompts.length)];
 }
 
@@ -2224,8 +2162,6 @@ async function shareAsImage(postId) {
     const galleryImages = postCard.querySelectorAll('.gallery-item img');
     
     const text = textEl?.innerText || '';
-    const mood = postCard.classList.contains('blue') ? 'blue' : 
-                 postCard.classList.contains('yellow') ? 'yellow' : 'red';
     const date = dateEl?.innerText || '';
     
     // Collect image sources
@@ -2290,13 +2226,9 @@ async function shareAsImage(postId) {
     canvas.width = width;
     canvas.height = height;
     
-    // Background gradient based on mood
-    const gradients = {
-        blue: ['#1a1a2e', '#16213e', '#0f3460'],
-        yellow: ['#1a1a0a', '#2d2d0a', '#3d3d0a'],
-        red: ['#1a0a0a', '#2d0a0a', '#3d1a1a']
-    };
-    const colors = gradients[mood] || gradients.blue;
+    // Background gradient
+    const colors = ['#121212', '#1a1a1a', '#242424'];
+    const ACCENT = '#e5e5e5';
     
     const gradient = ctx.createLinearGradient(0, 0, 0, height);
     gradient.addColorStop(0, colors[0]);
@@ -2305,17 +2237,14 @@ async function shareAsImage(postId) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
     
-    // Mood emoji and accent
-    const moodEmojis = { blue: '🌊', yellow: '✨', red: '🔥' };
-    const moodColors = { blue: '#60a5fa', yellow: '#fbbf24', red: '#f87171' };
-    
-    // Draw mood indicator (smaller for compact cards)
+    // Opening quotation mark (smaller for compact cards)
     const emojiSize = lineCount <= 3 ? 50 : 60;
-    ctx.font = `${emojiSize}px Arial`;
-    ctx.fillText(moodEmojis[mood], PADDING, PADDING + emojiSize - 10);
+    ctx.fillStyle = ACCENT;
+    ctx.font = `${emojiSize * 2}px Georgia, serif`;
+    ctx.fillText('\u201C', PADDING - 6, PADDING + emojiSize * 1.35);
     
     // Draw accent line
-    ctx.fillStyle = moodColors[mood];
+    ctx.fillStyle = ACCENT;
     const accentY = PADDING + emojiSize + 10;
     ctx.fillRect(PADDING, accentY, 80, 3);
     
@@ -2339,7 +2268,7 @@ async function shareAsImage(postId) {
         ctx.fillRect(PADDING, y - LINE_HEIGHT + 20, width - PADDING * 2, LINE_HEIGHT);
         
         // "See more..." text
-        ctx.fillStyle = moodColors[mood];
+        ctx.fillStyle = ACCENT;
         ctx.font = `italic 28px Georgia, serif`;
         ctx.fillText('See more...', PADDING, y + 15);
         y += seeMoreHeight;
@@ -2389,7 +2318,7 @@ async function shareAsImage(postId) {
     ctx.fillText(date, PADDING, height - footerHeight + 50);
     
     // Draw branding
-    ctx.fillStyle = moodColors[mood];
+    ctx.fillStyle = ACCENT;
     ctx.font = `bold ${footerFontSize - 2}px Arial`;
     ctx.fillText('MoodRing', width - 150, height - footerHeight + 50);
     
@@ -2589,7 +2518,7 @@ function fetchQuote() {
 // WEATHER
 // ═══════════════════════════════════════════════════════════════
 const weatherMoodMap = {
-    'Rain': { mood: 'blue', suggestion: "Rainy day... perfect for melancholic thoughts?" },
+    'Rain': { mood: 'blue', suggestion: "Rainy day... perfect for reflective thoughts?" },
     'Drizzle': { mood: 'blue', suggestion: "Light drizzle outside... feeling reflective?" },
     'Thunderstorm': { mood: 'red', suggestion: "Storm brewing... channel that energy!" },
     'Snow': { mood: 'blue', suggestion: "Snow falling... a quiet, contemplative mood?" },
@@ -2656,7 +2585,6 @@ async function openModalForEdit(post) {
     const modalOverlay = document.getElementById('modalOverlay');
     const thoughtInput = document.getElementById('thoughtInput');
     const charCount = document.getElementById('charCount');
-    const moodOptions = document.querySelectorAll('.mood-option');
     const submitBtn = document.getElementById('submitBtn');
     const modalTitle = document.querySelector('.modal-title');
 
@@ -2669,13 +2597,8 @@ async function openModalForEdit(post) {
         if (charCount) charCount.textContent = thoughtInput.innerText.length;
     }
 
-    // Select the mood
-    moodOptions.forEach(o => o.classList.remove('selected'));
-    const moodBtn = document.querySelector(`.mood-option.${post.mood}`);
-    if (moodBtn) {
-        moodBtn.classList.add('selected');
-        selectedMood = post.mood;
-    }
+    // Keep the mood the post was saved with
+    selectedMood = post.mood || DEFAULT_MOOD;
 
     // Load images - check if they're IndexedDB references
     currentPostImages = [];
@@ -2863,7 +2786,7 @@ async function handleDelete(postId) {
     const postEl = document.querySelector(`[data-id="${postId}"]`);
     if (postEl) postEl.remove();
     showToast('Post deleted');
-    await updateCounts();
+    if (loadedPosts) loadedPosts = loadedPosts.filter(p => p.id !== postId);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2935,31 +2858,6 @@ function setupEventListeners() {
         }
     });
     
-    // Filters
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            currentFilter = btn.dataset.filter;
-            
-            const titles = { all: 'All Posts', blue: 'Melancholy Posts', yellow: 'Vibrant Posts', red: 'Fiery Posts' };
-            document.getElementById('sectionTitle').textContent = titles[currentFilter];
-            
-            renderPosts({ refresh: false });
-        });
-    });
-    
-    // Mood selection
-    document.querySelectorAll('.mood-option').forEach(opt => {
-        opt.addEventListener('click', () => {
-            document.querySelectorAll('.mood-option').forEach(o => o.classList.remove('selected'));
-            opt.classList.add('selected');
-            selectedMood = opt.dataset.mood;
-            validateForm();
-            fetchAIPrompt(selectedMood);
-        });
-    });
-    
     // Post form
     const thoughtInput = document.getElementById('thoughtInput');
     const charCount = document.getElementById('charCount');
@@ -2995,11 +2893,6 @@ function setupEventListeners() {
         console.log('selectedMood:', selectedMood);
         console.log('thoughtInput content:', thoughtInput?.innerHTML);
         console.log('IS_ADMIN:', IS_ADMIN);
-
-        if (!selectedMood) {
-            showToast('Please select a mood first');
-            return;
-        }
 
         if (!thoughtInput?.innerText.trim()) {
             showToast('Please write something first');
@@ -3070,7 +2963,7 @@ function setupEventListeners() {
     
     // AI prompt refresh
     document.getElementById('aiRefresh')?.addEventListener('click', () => {
-        if (selectedMood) fetchAIPrompt(selectedMood);
+        fetchAIPrompt();
     });
     
     // Reactions - popup emoji click

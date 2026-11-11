@@ -38,15 +38,6 @@
     --radius-lg: 14px;
     --radius-xl: 20px;
     --spotify-green: #2a2a2a;
-
-    /* Mood colours: the only colour on the site, used for the mood pill,
-       the rule beside each post and the active filter. */
-    --mood-blue: #2c5a85;
-    --mood-blue-bg: #e8eff6;
-    --mood-yellow: #8a6100;
-    --mood-yellow-bg: #f8efd3;
-    --mood-red: #b0392b;
-    --mood-red-bg: #fae8e4;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -73,12 +64,6 @@
     --accent-red-bg: rgba(255, 255, 255, 0.06);
     --accent-green: #e0e0e0;
     --accent-green-bg: rgba(255, 255, 255, 0.08);
-    --mood-blue: #8fb9e2;
-    --mood-blue-bg: rgba(143, 185, 226, 0.13);
-    --mood-yellow: #e2bc5c;
-    --mood-yellow-bg: rgba(226, 188, 92, 0.13);
-    --mood-red: #f08c7d;
-    --mood-red-bg: rgba(240, 140, 125, 0.13);
     --shadow-xs: 0 1px 3px rgba(0,0,0,0.3);
     --shadow-sm: 0 2px 8px rgba(0,0,0,0.4);
     --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
@@ -249,7 +234,6 @@ body {
 }
 
 /* Icon Buttons */
-.icon-btn,
 .theme-toggle {
     display: flex;
     align-items: center;
@@ -264,7 +248,6 @@ body {
     transition: all 0.2s ease;
 }
 
-.icon-btn:hover,
 .theme-toggle:hover {
     background: var(--bg-secondary);
     color: var(--text-primary);
@@ -272,7 +255,6 @@ body {
     transform: translateY(-1px);
 }
 
-.icon-btn svg,
 .theme-toggle svg {
     width: 18px;
     height: 18px;
@@ -568,69 +550,6 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   FILTER NAVIGATION - Pill Tabs
-   ═══════════════════════════════════════════════════════════════ */
-.nav-filters {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-}
-
-.filter-btn {
-    padding: 0.5rem 0.85rem;
-    background: transparent;
-    border: none;
-    border-radius: var(--radius-sm);
-    color: var(--text-muted);
-    font-family: inherit;
-    font-size: 0.82rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.filter-btn:hover {
-    color: var(--text-primary);
-}
-
-.filter-btn.active {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-}
-
-.filter-btn .filter-count {
-    display: inline-block;
-    margin-left: 0.4rem;
-    padding: 0.15rem 0.5rem;
-    background: var(--bg-secondary);
-    border-radius: 10px;
-    font-size: 0.72rem;
-    font-weight: 600;
-}
-
-.filter-btn.active .filter-count {
-    background: var(--accent-blue-bg);
-    color: var(--accent-blue);
-}
-
-.filter-btn[data-filter="blue"] { --mood: var(--mood-blue); --mood-bg: var(--mood-blue-bg); }
-.filter-btn[data-filter="yellow"] { --mood: var(--mood-yellow); --mood-bg: var(--mood-yellow-bg); }
-.filter-btn[data-filter="red"] { --mood: var(--mood-red); --mood-bg: var(--mood-red-bg); }
-
-.filter-btn[data-filter]:not([data-filter="all"]).active {
-    background: var(--mood-bg);
-    color: var(--mood);
-}
-
-.filter-btn[data-filter]:not([data-filter="all"]).active .filter-count {
-    background: transparent;
-    color: inherit;
-    padding-left: 0;
-    padding-right: 0;
-}
-
-/* ═══════════════════════════════════════════════════════════════
    POSTS SECTION
    ═══════════════════════════════════════════════════════════════ */
 .posts-section {
@@ -666,26 +585,20 @@ body {
    POST CARD - Enhanced Design
    ═══════════════════════════════════════════════════════════════ */
 .post-card {
-    --mood: var(--border-color);
-    --mood-bg: var(--bg-secondary);
     position: relative;
-    padding: 0.25rem 0 0.25rem 1.25rem;
-    margin-bottom: 2.5rem;
-    border-left: 2px solid var(--mood);
-    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border-light);
     scroll-margin-top: 1.5rem;
-    transition: background-color 0.6s ease;
+    transition: background-color 0.6s ease, box-shadow 0.6s ease;
     animation: fadeInUp 0.4s ease forwards;
     opacity: 0;
 }
 
-.post-card.blue { --mood: var(--mood-blue); --mood-bg: var(--mood-blue-bg); }
-.post-card.yellow { --mood: var(--mood-yellow); --mood-bg: var(--mood-yellow-bg); }
-.post-card.red { --mood: var(--mood-red); --mood-bg: var(--mood-red-bg); }
-
 /* Briefly tinted when arrived at through a link to this post */
 .post-card.is-linked {
-    background-color: var(--mood-bg);
+    background-color: var(--bg-secondary);
+    box-shadow: 0 0 0 0.75rem var(--bg-secondary);
+    border-radius: var(--radius-sm);
 }
 
 .post-card:nth-child(1) { animation-delay: 0.05s; }
@@ -696,7 +609,7 @@ body {
 .post-card:nth-child(n+6) { animation-delay: 0.3s; }
 
 .post-card:last-child {
-    margin-bottom: 0;
+    border-bottom: none;
 }
 
 /* Post Meta */
@@ -706,32 +619,6 @@ body {
     gap: 0.75rem;
     margin-bottom: 1rem;
     flex-wrap: wrap;
-}
-
-.post-mood {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.75rem;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-}
-
-.post-mood.blue {
-    background: var(--mood-blue-bg);
-    color: var(--mood-blue);
-}
-
-.post-mood.yellow {
-    background: var(--mood-yellow-bg);
-    color: var(--mood-yellow);
-}
-
-.post-mood.red {
-    background: var(--mood-red-bg);
-    color: var(--mood-red);
 }
 
 .post-date {
@@ -937,7 +824,7 @@ a.post-date:hover {
     padding: 0.35rem 0;
     background: none;
     border: none;
-    color: var(--mood);
+    color: var(--text-primary);
     font-family: inherit;
     font-size: 0.85rem;
     font-weight: 600;
@@ -1182,55 +1069,6 @@ a.post-date:hover {
     text-transform: uppercase;
     color: var(--text-muted);
     margin-bottom: 0.75rem;
-}
-
-/* Mood Selector */
-.mood-selector {
-    display: flex;
-    gap: 0.75rem;
-}
-
-.mood-option {
-    flex: 1;
-    padding: 0.95rem 1rem;
-    background: var(--bg-secondary);
-    border: 2px solid transparent;
-    border-radius: var(--radius-md);
-    color: var(--text-secondary);
-    font-family: inherit;
-    font-size: 0.88rem;
-    font-weight: 600;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.25s ease;
-}
-
-.mood-option:hover {
-    background: var(--bg-primary);
-    border-color: var(--border-color);
-    transform: translateY(-1px);
-}
-
-.mood-option.selected {
-    transform: translateY(-2px);
-}
-
-.mood-option.selected.blue {
-    background: var(--accent-blue-bg);
-    border-color: var(--accent-blue);
-    color: var(--accent-blue);
-}
-
-.mood-option.selected.yellow {
-    background: var(--accent-yellow-bg);
-    border-color: var(--accent-yellow);
-    color: var(--accent-yellow);
-}
-
-.mood-option.selected.red {
-    background: var(--accent-red-bg);
-    border-color: var(--accent-red);
-    color: var(--accent-red);
 }
 
 /* Editor Toolbar */
@@ -1852,8 +1690,6 @@ label.toolbar-btn {
         font-weight: 700;
     }
 
-
-
     .header-actions {
         gap: 0.25rem;
         margin-left: auto;
@@ -1877,14 +1713,12 @@ label.toolbar-btn {
         font-weight: 600;
     }
 
-    .icon-btn,
     .theme-toggle {
         width: 36px;
         height: 36px;
         padding: 0;
     }
 
-    .icon-btn svg,
     .theme-toggle svg {
         width: 18px;
         height: 18px;
@@ -1905,10 +1739,7 @@ label.toolbar-btn {
         height: 18px;
     }
 
-
-
     /* Hide quote widget on mobile for cleaner look */
-
 
     .weather-widget {
         padding: 0.5rem 0.75rem;
@@ -1973,32 +1804,16 @@ label.toolbar-btn {
         font-size: 0.9rem;
     }
 
-    /* Compact filters */
-    .nav-filters {
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        margin: 0 -0.75rem 0.5rem;
-        padding: 0.25rem 0.75rem;
-        gap: 0.25rem;
-        -webkit-overflow-scrolling: touch;
-    }
 
-    .filter-btn {
-        flex-shrink: 0;
-        padding: 0.4rem 0.65rem;
-        font-size: 0.75rem;
-        border-radius: 999px;
-    }
 
-    .filter-count {
-        font-size: 0.65rem;
-        padding: 0.1rem 0.35rem;
-    }
+
+
+
+
 
     /* Compact post cards */
     .post-card {
-        padding: 0.15rem 0 0.15rem 0.9rem;
-        margin-bottom: 1.75rem;
+        padding: 1.1rem 0;
     }
 
     .post-content .post-title {
@@ -2010,10 +1825,7 @@ label.toolbar-btn {
         margin-bottom: 0.5rem;
     }
 
-    .post-mood {
-        padding: 0.2rem 0.5rem;
-        font-size: 0.7rem;
-    }
+
 
     .post-date,
     .post-reading-time {
@@ -2093,17 +1905,9 @@ label.toolbar-btn {
         margin-bottom: 0.75rem;
     }
 
-    .mood-selector {
-        flex-direction: row;
-        gap: 0.35rem;
-    }
 
-    .mood-option {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.8rem;
-        flex: 1;
-        text-align: center;
-    }
+
+
 
     .thought-input {
         min-height: 100px;
@@ -2188,7 +1992,6 @@ label.toolbar-btn {
         gap: 0.15rem;
     }
 
-    .icon-btn,
     .theme-toggle {
         width: 32px;
         height: 32px;
@@ -2198,10 +2001,7 @@ label.toolbar-btn {
         padding: 0.4rem 0.6rem;
     }
 
-    .filter-btn {
-        padding: 0.35rem 0.5rem;
-        font-size: 0.7rem;
-    }
+
 
     .post-content {
         font-size: 0.9rem;
@@ -2216,10 +2016,7 @@ label.toolbar-btn {
         font-size: 0.8rem;
     }
 
-    .mood-option {
-        padding: 0.4rem 0.5rem;
-        font-size: 0.75rem;
-    }
+
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2227,11 +2024,8 @@ label.toolbar-btn {
    ═══════════════════════════════════════════════════════════════ */
 @media (hover: none) {
     .write-btn:hover,
-    .icon-btn:hover,
-    .theme-toggle:hover,
-    .filter-btn:hover,
-    .mood-option:hover,
-    .submit-btn:hover:not(:disabled) {
+.theme-toggle:hover,
+.submit-btn:hover:not(:disabled) {
         transform: none;
         box-shadow: var(--shadow-xs);
     }
@@ -2241,18 +2035,13 @@ label.toolbar-btn {
         opacity: 0.9;
     }
 
-    .icon-btn:active,
     .theme-toggle:active {
         transform: scale(0.95);
     }
 
-    .filter-btn:active {
-        transform: scale(0.97);
-    }
 
-    .mood-option:active {
-        transform: scale(0.98);
-    }
+
+
 
     .post-card:active {
         transform: scale(0.995);
@@ -2271,7 +2060,6 @@ label.toolbar-btn {
     -webkit-tap-highlight-color: rgba(255, 255, 255, 0.1);
 }
 
-.nav-filters,
 .modal {
     -webkit-overflow-scrolling: touch;
 }
@@ -2299,17 +2087,6 @@ button {
 
 ::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
-}
-
-@media (max-width: 600px) {
-    .nav-filters::-webkit-scrollbar {
-        display: none;
-    }
-
-    .nav-filters {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -2534,26 +2311,6 @@ button {
     height: 18px;
     flex-shrink: 0;
     color: var(--text-muted);
-}
-
-.menu-dot {
-    width: 10px;
-    height: 10px;
-    margin: 0 4px;
-    border-radius: 50%;
-    flex-shrink: 0;
-    background: var(--text-muted);
-}
-
-.menu-dot.blue { background: var(--mood-blue); }
-.menu-dot.yellow { background: var(--mood-yellow); }
-.menu-dot.red { background: var(--mood-red); }
-
-.menu-count {
-    margin-left: auto;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    font-variant-numeric: tabular-nums;
 }
 
 .side-menu-foot {
@@ -2894,15 +2651,9 @@ button {
 
 @media (max-width: 480px) {
 
-
-
-
-
-
     .reactions-wrapper {
         width: 100%;
     }
-
 
 }
 
@@ -2945,29 +2696,24 @@ body {
 
 /* Touch-friendly tap targets (compact but usable) */
 @media (hover: none) and (pointer: coarse) {
-    .icon-btn,
     .theme-toggle,
-    .like-btn,
-    .reaction-emoji,
-    .share-btn,
-    .delete-btn,
-    .toolbar-btn {
+.like-btn,
+.reaction-emoji,
+.share-btn,
+.delete-btn,
+.toolbar-btn {
         min-width: 36px;
         min-height: 36px;
     }
 
-    .filter-btn {
-        min-height: 32px;
-    }
+
 
     .like-btn {
         padding: 0.4rem 0.6rem;
         font-size: 0.85rem;
     }
 
-    .filter-btn {
-        padding: 0.4rem 0.65rem;
-    }
+
 
     .toolbar-btn {
         padding: 0.4rem;
@@ -2990,8 +2736,7 @@ body {
 
     /* Active states for touch */
     .like-btn:active,
-    .share-btn:active,
-    .filter-btn:active {
+.share-btn:active {
         transform: scale(0.95);
         opacity: 0.8;
     }
@@ -3156,10 +2901,8 @@ body {
         font-size: 16px;
     }
 
-    /* Smooth momentum scrolling */
-    .nav-filters {
-        -webkit-overflow-scrolling: touch;
-    }
+
+
 
     /* Fix for iOS rubber-banding */
     .modal {
@@ -3173,9 +2916,7 @@ body {
         border: 2px solid var(--text-primary);
     }
 
-    .filter-btn.active {
-        outline: 2px solid var(--text-primary);
-    }
+
 }
 
 /* Reduce motion for accessibility */

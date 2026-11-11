@@ -7,8 +7,8 @@
     <!-- Primary Meta Tags -->
     <title>Aashish Joshi — Thoughts & Musings | Personal Blog</title>
     <meta name="title" content="Aashish Joshi — Thoughts & Musings | Personal Blog">
-    <meta name="description" content="A personal space for thoughts, ideas, and creative musings by Aashish Joshi. From Doti, Nepal to New Jersey, USA — sharing melancholic musings, vibrant celebrations, and fiery rants.">
-    <meta name="keywords" content="Aashish Joshi, personal blog, thoughts, musings, Nepal, New Jersey, creative writing, mood blog">
+    <meta name="description" content="A personal space for thoughts, ideas, and creative musings by Aashish Joshi. From Doti, Nepal to New Jersey, USA — sharing unfiltered thoughts.">
+    <meta name="keywords" content="Aashish Joshi, personal blog, thoughts, musings, Nepal, New Jersey, creative writing">
     <meta name="author" content="Aashish Joshi">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://aashish000000.github.io/Moodring/">
@@ -134,7 +134,7 @@
             </div>
         </header>
 
-        <!-- Weather & Mood Suggestion (Admin Only) -->
+        <!-- Weather (Admin Only) -->
         <div class="weather-widget admin-only" id="weatherWidget" style="display: none;">
             <div class="weather-info">
                 <span class="weather-temp" id="weatherTemp">--°F</span>
@@ -150,7 +150,7 @@
             <div class="about-content">
                 <img src="assets/avatar-192.jpg" alt="Aashish Joshi" class="avatar" width="192" height="192">
                 <div class="about-text">
-                    <p>Welcome to my corner of the internet. This is where I share my unfiltered thoughts—the melancholic musings, the vibrant celebrations, and the fiery rants. Feel free to explore based on how you're feeling today.</p>
+                    <p>Welcome to my corner of the internet. This is where I share my unfiltered thoughts. Feel free to look around.</p>
                     <div class="social-links">
                         <a href="https://www.instagram.com/__aashishthegreat/" target="_blank" rel="noopener" class="social-link">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
@@ -210,26 +210,10 @@
             </button>
         </div>
 
-        <!-- Filter Navigation -->
-        <nav class="nav-filters" id="navFilters">
-            <button class="filter-btn active" data-filter="all">
-                All<span class="filter-count" id="countAll">0</span>
-            </button>
-            <button class="filter-btn" data-filter="blue">
-                🌊 Melancholy<span class="filter-count" id="countBlue">0</span>
-            </button>
-            <button class="filter-btn" data-filter="yellow">
-                ✨ Vibrant<span class="filter-count" id="countYellow">0</span>
-            </button>
-            <button class="filter-btn" data-filter="red">
-                🔥 Fiery<span class="filter-count" id="countRed">0</span>
-            </button>
-        </nav>
-
         <!-- Posts Section -->
         <main class="posts-section">
             <div class="section-header">
-                <span class="section-title" id="sectionTitle">All Posts</span>
+                <span class="section-title" id="sectionTitle">Posts</span>
                 <span class="results-count" id="resultsCount"></span>
             </div>
             <div class="posts-list" id="postsList">
@@ -267,12 +251,6 @@
         </div>
 
         <nav class="side-menu-body">
-            <p class="side-menu-label">Browse</p>
-            <button type="button" class="menu-item" data-menu-filter="all"><span class="menu-dot"></span>All posts<span class="menu-count" data-count="all"></span></button>
-            <button type="button" class="menu-item" data-menu-filter="blue"><span class="menu-dot blue"></span>Melancholy<span class="menu-count" data-count="blue"></span></button>
-            <button type="button" class="menu-item" data-menu-filter="yellow"><span class="menu-dot yellow"></span>Vibrant<span class="menu-count" data-count="yellow"></span></button>
-            <button type="button" class="menu-item" data-menu-filter="red"><span class="menu-dot red"></span>Fiery<span class="menu-count" data-count="red"></span></button>
-
             <p class="side-menu-label admin-only" style="display: none;">Write</p>
             <button type="button" class="menu-item admin-only" data-menu-action="new" style="display: none;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>New post</button>
             <button type="button" class="menu-item admin-only" data-menu-action="sync" style="display: none;"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 16a4 4 0 01-.88-7.9A5 5 0 1115.9 6H16a5 5 0 011 9.9M15 13l-3-3-3 3M12 10v11"/></svg>Sync posts to cloud</button>
@@ -319,18 +297,10 @@
                         </svg>
                     </button>
                 </div>
-                <p class="ai-prompt-text" id="aiPromptText">Select a mood to get a writing prompt...</p>
+                <p class="ai-prompt-text" id="aiPromptText">Need somewhere to start?</p>
             </div>
             
             <form id="postForm">
-                <div class="form-group">
-                    <label class="form-label">What's the vibe?</label>
-                    <div class="mood-selector">
-                        <button type="button" class="mood-option blue" data-mood="blue">🌊 Melancholy</button>
-                        <button type="button" class="mood-option yellow" data-mood="yellow">✨ Vibrant</button>
-                        <button type="button" class="mood-option red" data-mood="red">🔥 Fiery</button>
-                    </div>
-                </div>
                 <div class="form-group">
                     <label class="form-label">Your thoughts</label>
                     <div class="editor-toolbar">

@@ -1,7 +1,7 @@
 {
     "name": "MoodRing",
     "short_name": "MoodRing",
-    "description": "Share your mood — melancholic musings, vibrant celebrations & fiery rants",
+    "description": "Unfiltered thoughts, ideas and musings by Aashish Joshi",
     "start_url": "./",
     "display": "standalone",
     "background_color": "#fafafa",
