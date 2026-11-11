@@ -2313,6 +2313,16 @@ button {
     color: var(--text-muted);
 }
 
+/* On a phone the header only has room for the theme, new-post and menu
+   buttons. The admin badge and sync pill would squeeze the title into a
+   narrow column; the menu already says "Signed in as admin" and has Sync. */
+@media (max-width: 600px) {
+    .header-actions .admin-badge,
+    .header-actions .sync-status {
+        display: none !important;
+    }
+}
+
 .side-menu-foot {
     padding: 0.6rem 0.75rem;
     border-top: 1px solid var(--border-light);
