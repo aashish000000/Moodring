@@ -356,6 +356,8 @@ function updateAdminUI(isAdmin) {
     if (adminBadge) {
         adminBadge.style.display = isAdmin ? 'inline-flex' : 'none';
     }
+    const menuRole = document.getElementById('menuRole');
+    if (menuRole) menuRole.textContent = isAdmin ? 'Signed in as admin' : 'MoodRing';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1268,6 +1270,11 @@ function setCounts(posts) {
     document.getElementById('countBlue').textContent = posts.filter(p => p.mood === 'blue').length;
     document.getElementById('countYellow').textContent = posts.filter(p => p.mood === 'yellow').length;
     document.getElementById('countRed').textContent = posts.filter(p => p.mood === 'red').length;
+
+    document.querySelectorAll('[data-count]').forEach(el => {
+        const mood = el.dataset.count;
+        el.textContent = mood === 'all' ? posts.length : posts.filter(p => p.mood === mood).length;
+    });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1579,6 +1586,7 @@ function showLoginModal() {
     const modal = document.getElementById('loginModal');
     if (modal) {
         modal.classList.add('visible');
+        setTimeout(() => document.getElementById('loginEmail')?.focus(), 100);
         console.log('Login modal opened');
     } else {
         console.error('Login modal not found!');
@@ -1588,6 +1596,91 @@ function showLoginModal() {
 function hideLoginModal() {
     const modal = document.getElementById('loginModal');
     if (modal) modal.classList.remove('visible');
+    setPasswordVisible(false);
+}
+
+function setPasswordVisible(visible) {
+    const input = document.getElementById('loginPassword');
+    const toggle = document.getElementById('passwordToggle');
+    if (!input || !toggle) return;
+    input.type = visible ? 'text' : 'password';
+    toggle.setAttribute('aria-pressed', String(visible));
+    toggle.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIDE MENU
+// ═══════════════════════════════════════════════════════════════
+function openMenu() {
+    const menu = document.getElementById('sideMenu');
+    if (!menu) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.getElementById('menuThemeLabel').textContent = isDark ? 'Light mode' : 'Dark mode';
+    menu.querySelectorAll('[data-menu-filter]').forEach(item => {
+        item.toggleAttribute('aria-current', item.dataset.menuFilter === currentFilter);
+    });
+    menu.inert = false;
+    menu.classList.add('open');
+    document.getElementById('menuBackdrop').classList.add('visible');
+    document.getElementById('menuBtn').setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+    document.getElementById('menuClose').focus();
+}
+
+function closeMenu({ restoreFocus = true } = {}) {
+    const menu = document.getElementById('sideMenu');
+    if (!menu || !menu.classList.contains('open')) return;
+    menu.classList.remove('open');
+    menu.inert = true;
+    document.getElementById('menuBackdrop').classList.remove('visible');
+    document.body.style.overflow = '';
+    const button = document.getElementById('menuBtn');
+    button.setAttribute('aria-expanded', 'false');
+    if (restoreFocus) button.focus();
+}
+
+function handleMenuClick(e) {
+    const item = e.target.closest('.menu-item');
+    if (!item) return;
+
+    if (item.dataset.menuFilter) {
+        closeMenu({ restoreFocus: false });
+        document.querySelector(`.filter-btn[data-filter="${item.dataset.menuFilter}"]`)?.click();
+        document.getElementById('navFilters')?.scrollIntoView({ block: 'start' });
+        return;
+    }
+
+    switch (item.dataset.menuAction) {
+        case 'theme':
+            toggleTheme();
+            document.getElementById('menuThemeLabel').textContent =
+                document.documentElement.getAttribute('data-theme') === 'dark' ? 'Light mode' : 'Dark mode';
+            return; // stays open so the change is visible
+        case 'new':
+            closeMenu({ restoreFocus: false });
+            openModal();
+            return;
+        case 'sync':
+            closeMenu();
+            syncAllPostsToCloud();
+            return;
+        case 'export':
+            closeMenu();
+            exportPosts();
+            return;
+        case 'import':
+            closeMenu();
+            document.getElementById('importInput')?.click();
+            return;
+        case 'copy-link':
+            closeMenu();
+            navigator.clipboard.writeText(window.location.origin + window.location.pathname)
+                .then(() => showToast('Link copied'));
+            return;
+    }
+
+    // Login/logout and plain links do their own thing; just get out of the way.
+    closeMenu({ restoreFocus: false });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2784,7 +2877,19 @@ function setupEventListeners() {
     document.getElementById('writeTrigger')?.addEventListener('click', () => openModal());
 
     // Backup export (import is wired via inline onchange on the file input)
-    document.getElementById('exportBtn')?.addEventListener('click', exportPosts);
+    // Side menu
+    document.getElementById('menuBtn')?.addEventListener('click', openMenu);
+    document.getElementById('menuClose')?.addEventListener('click', () => closeMenu());
+    document.getElementById('menuBackdrop')?.addEventListener('click', () => closeMenu());
+    document.getElementById('sideMenu')?.addEventListener('click', handleMenuClick);
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
+    });
+
+    // Show / hide password
+    document.getElementById('passwordToggle')?.addEventListener('click', () => {
+        setPasswordVisible(document.getElementById('loginPassword').type === 'password');
+    });
     
     // Modal
     document.getElementById('modalClose')?.addEventListener('click', closeModal);
@@ -3047,7 +3152,7 @@ function setupEventListeners() {
     
     // Reactions popup hover (desktop)
     document.addEventListener('mouseenter', async (e) => {
-        const trigger = e.target.closest('.reaction-trigger');
+        const trigger = e.target.closest?.('.reaction-trigger');
         if (trigger) {
             const postId = trigger.dataset.postId;
             const popup = document.querySelector(`.reactions-popup[data-post-id="${postId}"]`);
@@ -3059,7 +3164,7 @@ function setupEventListeners() {
     }, true);
     
     document.addEventListener('mouseleave', (e) => {
-        const trigger = e.target.closest('.reaction-trigger');
+        const trigger = e.target.closest?.('.reaction-trigger');
         if (trigger) {
             const postId = trigger.dataset.postId;
             setTimeout(() => {
